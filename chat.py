@@ -426,10 +426,3 @@ if __name__ == "__main__":
     print("Prompt Decorator with Hermes Streaming Test:")
     for chunk in country_info_stream_hermes("Sun"):
         print(chunk, end="", flush=True)
-
-
-# TODO
-# - Make sure exceptions are handled correctly
-# - Test if cache is working with decorators
-# - Test consecutive calls to decorator to ensure context is maintained
-# - Implement and test decorator functionality with all supported providers (OpenAI, Anthropic, etc.)
