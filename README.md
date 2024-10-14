@@ -1,4 +1,4 @@
-# Usage
+# chat.py
 
 This library provides a unified interface to interact with various AI language models across different providers like OpenAI and Anthropic. It offers:
 
