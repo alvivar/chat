@@ -6,26 +6,6 @@ This library provides a unified interface to interact with various AI language m
 -   A `@prompt` decorator to simplify prompt creation.
 -   Caching capabilities to store and reuse responses.
 
-## Prerequisites
-
--   Python 3.7 or higher.
--   API keys for the AI providers you plan to use (e.g., OpenAI, Anthropic).
--   Installation of necessary packages:
-    ```bash
-    pip install openai anthropic
-    ```
-
-## Setting Up API Keys
-
-Ensure your API keys are set as environment variables:
-
-```bash
-export OPENAI_API_KEY='your-openai-api-key'
-export ANTHROPIC_API_KEY='your-anthropic-api-key'
-```
-
-Alternatively, pass the API key directly when initializing the `Chat` class.
-
 ## Using the `Chat` Class
 
 The `Chat` class allows you to interact with AI models in a conversational manner.
@@ -74,15 +54,6 @@ For large responses, you might prefer to stream the output:
 ```python
 for chunk in chat("Explain quantum computing in simple terms.", stream=True):
     print(chunk, end="", flush=True)
-```
-
-### Ignoring Cache
-
-To bypass the cache for a specific query:
-
-```python
-response = chat("What is the weather today?", ignore_cache=True)
-print(response)
 ```
 
 ## Using the `@prompt` Decorator
@@ -161,16 +132,13 @@ response = chat("What is its population?")
 print(response)  # Assistant uses previous context to answer.
 ```
 
-### Error Handling
+### Ignoring Cache
 
-Wrap your calls in try-except blocks to handle exceptions gracefully:
+To bypass the cache for a specific query:
 
 ```python
-try:
-    response = chat("Tell me a joke.")
-    print(response)
-except Exception as e:
-    print(f"Error: {e}")
+response = chat("What is the weather today?", ignore_cache=True)
+print(response)
 ```
 
 ## Notes
@@ -182,3 +150,24 @@ except Exception as e:
 ## Testing and Examples
 
 To test the functionality, you can run the script provided in the `if __name__ == "__main__":` block. It includes tests for OpenAI, Anthropic, and custom providers, as well as examples using the `@prompt` decorator.
+
+## Prerequisites
+
+-   Python 3.7 or higher.
+-   API keys for the AI providers you plan to use (e.g., OpenAI, Anthropic).
+-   Installation of necessary packages:
+
+    ```bash
+    pip install openai anthropic
+    ```
+
+## Setting Up API Keys
+
+Ensure your API keys are set as environment variables:
+
+```bash
+export OPENAI_API_KEY='your-openai-api-key'
+export ANTHROPIC_API_KEY='your-anthropic-api-key'
+```
+
+Alternatively, pass the API key directly when initializing the `Chat` class.
