@@ -1,10 +1,10 @@
 # chat.py
 
-This library provides a unified interface to interact with various AI language models across different providers like OpenAI and Anthropic. It offers:
+This library aims to provide a unified interface for interacting with various AI language models across different providers like OpenAI and Anthropic. It offers:
 
 -   A `Chat` class for managing conversations with AI models.
 -   A `@prompt` decorator to simplify prompt creation.
--   Caching capabilities to store and reuse responses.
+-   Basic caching capabilities to store and reuse responses.
 
 ## Using the `Chat` Class
 
@@ -143,13 +143,13 @@ print(response)
 
 ## Notes
 
--   **Caching:** Responses are cached in `chat_cache.json` to reduce API calls.
--   **Providers Supported:** Currently supports OpenAI and Anthropic. Support for more providers is planned.
--   **Context:** The `Chat` class maintains context across messages. The `@prompt` decorator does not maintain context between calls.
+-   **Caching:** Responses are cached in `chat_cache.json` in an attempt to reduce API calls.
+-   **Providers Supported:** Currently supports OpenAI and Anthropic. We're considering adding support for more providers in the future.
+-   **Context:** The `Chat` class attempts to maintain context across messages. The `@prompt` decorator does not maintain context between calls.
 
 ## Testing and Examples
 
-To test the functionality, you can run the script provided in the `if __name__ == "__main__":` block. It includes tests for OpenAI, Anthropic, and custom providers, as well as examples using the `@prompt` decorator.
+To test the functionality, you can run the script provided in the `if __name__ == "__main__":` block. It includes basic tests for OpenAI, Anthropic, and custom providers, as well as examples using the `@prompt` decorator.
 
 ## Prerequisites
 
