@@ -141,16 +141,6 @@ response = chat("What is the weather today?", ignore_cache=True)
 print(response)
 ```
 
-## Notes
-
--   **Caching:** Responses are cached in `chat_cache.json` in an attempt to reduce API calls.
--   **Providers Supported:** Currently supports OpenAI and Anthropic. We're considering adding support for more providers in the future.
--   **Context:** The `Chat` class attempts to maintain context across messages. The `@prompt` decorator does not maintain context between calls.
-
-## Testing and Examples
-
-To test the functionality, you can run the script provided in the `if __name__ == "__main__":` block. It includes basic tests for OpenAI, Anthropic, and custom providers, as well as examples using the `@prompt` decorator.
-
 ## Prerequisites
 
 -   Python 3.7 or higher.
@@ -171,3 +161,13 @@ export ANTHROPIC_API_KEY='your-anthropic-api-key'
 ```
 
 Alternatively, pass the API key directly when initializing the `Chat` class.
+
+## Notes
+
+-   **Caching:** Responses are cached in `chat_cache.json` in an attempt to reduce API calls.
+-   **Providers Supported:** Currently supports OpenAI and Anthropic. We're considering adding support for more providers in the future.
+-   **Context:** The `Chat` class attempts to maintain context across messages. The `@prompt` decorator does not maintain context between calls.
+
+## Testing and Examples
+
+To test the functionality, you can run the script provided in the `if __name__ == "__main__":` block. It includes basic tests for OpenAI, Anthropic, and custom providers, as well as examples using the `@prompt` decorator.
