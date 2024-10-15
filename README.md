@@ -58,7 +58,7 @@ for chunk in chat("Explain quantum computing in simple terms.", stream=True):
 
 ## Using the `@prompt` Decorator
 
-The `@prompt` decorator simplifies the process of sending prompts to the AI model by converting a function's return value into a prompt.
+The `@prompt` decorator streamlines AI interactions by transforming a function's output into a prompt. The function's docstring (`"""`) serves as the system prompt, while its return value becomes the user prompt sent to the AI model.
 
 ### Basic Usage
 
