@@ -24,6 +24,8 @@ class AIProvider(ABC):
 
 
 class OpenAIProvider(AIProvider):
+    REASONING_MODELS = {"o1", "o3-mini"}
+
     def create_client(
         self,
         base_url: Optional[str],
@@ -37,13 +39,22 @@ class OpenAIProvider(AIProvider):
         messages = [{"role": "system", "content": kwargs["system"]}] + kwargs[
             "messages"
         ]
-        return kwargs["client"].chat.completions.create(
-            model=kwargs["model"],
-            messages=messages,
-            max_tokens=kwargs["max_tokens"],
-            temperature=kwargs["temperature"],
-            stream=stream,
-        )
+        completion_params = {
+            "model": kwargs["model"],
+            "messages": messages,
+            "stream": stream,
+        }
+
+        # Add model-specific parameters
+        if kwargs["model"] in self.REASONING_MODELS:
+            completion_params["reasoning_effort"] = kwargs.get(
+                "reasoning_effort", "high"
+            )
+        else:
+            completion_params["max_tokens"] = kwargs["max_tokens"]
+            completion_params["temperature"] = kwargs["temperature"]
+
+        return kwargs["client"].chat.completions.create(**completion_params)
 
     def iter_chunks(self, completion: Any) -> Iterator[str]:
         for chunk in completion:
@@ -115,6 +126,7 @@ class Chat:
         provider: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        reasoning_effort: str = "high",
     ):
         self.provider = self._get_provider(model, provider)
         self.client = self.provider.create_client(base_url, api_key)
@@ -123,6 +135,7 @@ class Chat:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.api_key = api_key
+        self.reasoning_effort = reasoning_effort
         self.messages: List[Dict[str, str]] = []
 
     def _get_provider(self, model: str, provider: Optional[str]) -> AIProvider:
@@ -180,15 +193,17 @@ class Chat:
         return response
 
     def _create_completion(self, stream: bool):
-        return self.provider.create_completion(
-            stream,
-            client=self.client,
-            model=self.model,
-            messages=self.messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system=self.system,
-        )
+        completion_params = {
+            "stream": stream,
+            "client": self.client,
+            "model": self.model,
+            "messages": self.messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "system": self.system,
+            "reasoning_effort": self.reasoning_effort,
+        }
+        return self.provider.create_completion(**completion_params)
 
     def _stream_response(self, completion):
         full_response = []
@@ -205,6 +220,7 @@ def prompt(
     base_url=None,
     max_tokens=1024,
     temperature=0.7,
+    reasoning_effort="high",
     stream=False,
 ):
     def decorator(func):
@@ -217,6 +233,7 @@ def prompt(
             temperature=temperature,
             provider=provider,
             base_url=base_url,
+            reasoning_effort=reasoning_effort,
         )
 
         def wrapper(*args, **kwargs):
@@ -257,6 +274,7 @@ if __name__ == "__main__":
             base_url=base_url,
             max_tokens=256,
             temperature=0.6,
+            reasoning_effort="medium",
         )
         def simple_question():
             """You are a helpful AI assistant. Provide concise and accurate responses."""
@@ -268,6 +286,7 @@ if __name__ == "__main__":
             base_url=base_url,
             max_tokens=256,
             temperature=0.6,
+            reasoning_effort="medium",
             stream=True,
         )
         def simple_question_stream():
@@ -283,7 +302,6 @@ if __name__ == "__main__":
         print("\n")
 
     # Setup
-
     system_prompt = "Provide accurate and concise responses."
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
     openai_api_key = os.environ.get("OPENAI_API_KEY")
