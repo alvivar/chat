@@ -1,6 +1,6 @@
 # chat.py
 
-This library aims to provide a unified interface for interacting with various AI language models across different providers like OpenAI and Anthropic. It offers:
+This library aims to provide a unified interface for interacting with various AI language models across different providers like OpenAI, Anthropic, and Google. It offers:
 
 -   A `Chat` class for managing conversations with AI models.
 -   A `@prompt` decorator to simplify prompt creation.
@@ -15,9 +15,9 @@ The `Chat` class allows you to interact with AI models in a conversational manne
 from chat import Chat
 
 chat = Chat(
-    model="sonnet",  # or "haiku", "o3-mini", "4o", "4o-mini"
+    model="sonnet",  # or "haiku", "gemini-pro", "o3-mini", "4o", "4o-mini"
     system="You are a helpful assistant.",
-    provider="anthropic",  # or "openai"
+    provider="anthropic",  # or "openai" or "google"
     max_tokens=4096,
     temperature=0.8,
     reasoning_effort="high"  # Optional, for specific models
@@ -28,8 +28,9 @@ chat = Chat(
     -   `model`: The AI model to use (supported models include):
         -   Anthropic: `"sonnet"` (claude-3-5-sonnet-20241022), `"haiku"` (claude-3-5-haiku-20241022)
         -   OpenAI: `"o3-mini"`, `"4o"`, `"4o-mini"`
+        -   Google: `"gemini-pro"` (gemini-2.0-pro-exp-02-05), `"gemini-flash"` (gemini-2.0-flash-001)
     -   `system`: The system prompt that defines the assistant's behavior.
-    -   `provider`: The AI provider (`"openai"` or `"anthropic"`).
+    -   `provider`: The AI provider (`"openai"`, `"anthropic"`, or `"google"`).
     -   `max_tokens`: Maximum number of tokens for the response.
     -   `temperature`: Controls the randomness of the output.
     -   `base_url`: (Optional) Custom API base URL.
@@ -137,11 +138,11 @@ print(response)  # Assistant uses previous context to answer.
 ## Prerequisites
 
 -   Python 3.7 or higher.
--   API keys for the AI providers you plan to use (e.g., OpenAI, Anthropic).
+-   API keys for the AI providers you plan to use (e.g., OpenAI, Anthropic, Google).
 -   Installation of necessary packages:
 
     ```bash
-    pip install openai anthropic
+    pip install openai anthropic google-genai
     ```
 
 ## Setting Up API Keys
@@ -151,16 +152,18 @@ Ensure your API keys are set as environment variables:
 ```bash
 export OPENAI_API_KEY='your-openai-api-key'
 export ANTHROPIC_API_KEY='your-anthropic-api-key'
+export GOOGLE_API_KEY='your-google-api-key'
 ```
 
 Alternatively, pass the API key directly when initializing the `Chat` class.
 
 ## Notes
 
--   **Providers Supported:** Currently supports OpenAI and Anthropic models:
+-   **Providers Supported:** Currently supports OpenAI, Anthropic, and Google models:
     -   Anthropic: Claude 3.5 Sonnet and Haiku
     -   OpenAI: O3-mini, 4O, and 4O-mini
--   **Context:** The `Chat` class maintains context across messages. The `@prompt` decorator does not maintain context between calls.
+    -   Google: Gemini Pro and Gemini Flash
+-   **Context:** The `Chat` class maintains context across messages. The `@prompt` decorator does not maintain context between calls (yet).
 -   **Reasoning Effort:** Some models support adjustable reasoning effort levels ("high", "medium", "low").
 
 ## Testing and Examples
