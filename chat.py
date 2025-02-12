@@ -32,7 +32,6 @@ class OpenAIProvider(AIProvider):
         api_key: Optional[str],
     ) -> OpenAI:
         api_key = api_key or os.environ.get("OPENAI_API_KEY")
-
         return OpenAI(base_url=base_url, api_key=api_key)
 
     def create_completion(self, stream: bool, **kwargs: Any):
@@ -45,7 +44,6 @@ class OpenAIProvider(AIProvider):
             "stream": stream,
         }
 
-        # Add model-specific parameters
         if kwargs["model"] in self.REASONING_MODELS:
             completion_params["reasoning_effort"] = kwargs.get(
                 "reasoning_effort", "high"
@@ -72,7 +70,6 @@ class AnthropicProvider(AIProvider):
         api_key: Optional[str],
     ) -> Anthropic:
         api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-
         return Anthropic(api_key=api_key)
 
     def create_completion(self, stream: bool, **kwargs: Any):
@@ -120,7 +117,7 @@ class Chat:
         self,
         model: str,
         system: str = "",
-        max_tokens: int = 512,
+        max_tokens: int = 4096,
         temperature: float = 0.8,
         provider: Optional[str] = None,
         base_url: Optional[str] = None,
@@ -146,7 +143,6 @@ class Chat:
                 )
             return self.PROVIDER_MAP[provider]["provider"]()
 
-        # Check both nicknames and full model names
         for provider_info in self.PROVIDER_MAP.values():
             models = provider_info["models"]
             if model in models.keys() or model in models.values():
@@ -161,23 +157,17 @@ class Chat:
         if provider:
             provider_info = self.PROVIDER_MAP[provider]
         else:
-            # Find the provider info by checking both nicknames and full names
             for p_info in self.PROVIDER_MAP.values():
                 models = p_info["models"]
                 if model in models.keys() or model in models.values():
                     provider_info = p_info
                     break
             else:
-                return model  # Return original model name if not found in mappings
+                return model
 
-        # If model is a nickname, get full name, otherwise return original model name
         return provider_info["models"].get(model, model)
 
-    def __call__(
-        self,
-        user_message: str,
-        stream: bool = False,
-    ):
+    def __call__(self, user_message: str, stream: bool = False):
         self.messages.append({"role": "user", "content": user_message})
         return self._generate_new_response(stream)
 
@@ -217,8 +207,8 @@ def prompt(
     model,
     provider=None,
     base_url=None,
-    max_tokens=1024,
-    temperature=0.7,
+    max_tokens=4096,
+    temperature=0.8,
     reasoning_effort="high",
     stream=False,
 ):
@@ -256,17 +246,22 @@ if __name__ == "__main__":
     across providers, testing both normal and streaming responses.
     """
 
+    # Helper function to test basic chat functionality for a given model
     def test_model(chat, model_name):
         print(f"\nTesting {model_name}:")
+        # Test regular non-streaming response
         print("Normal response:")
         print(chat("What color is the sky?"))
 
+        # Test streaming response
         print("\nStreaming response:")
         for chunk in chat("What color is grass?", stream=True):
             print(chunk, end="", flush=True)
         print("\n")
 
+    # Helper function to test the @prompt decorator functionality
     def test_decorator(model, provider=None, base_url=None):
+        # Test regular non-streaming prompt
         @prompt(
             model=model,
             provider=provider,
@@ -279,6 +274,7 @@ if __name__ == "__main__":
             """You are a helpful AI assistant. Provide concise and accurate responses."""
             return "What color is the sun?"
 
+        # Test streaming prompt
         @prompt(
             model=model,
             provider=provider,
@@ -292,6 +288,7 @@ if __name__ == "__main__":
             """You are a helpful AI assistant. Provide concise and accurate responses."""
             return "What color is the moon?"
 
+        # Execute and print results
         print(f"\nTesting {model} normal response:")
         print(simple_question())
 
@@ -300,12 +297,12 @@ if __name__ == "__main__":
             print(chunk, end="", flush=True)
         print("\n")
 
-    # Setup
+    # Set up common configuration
     system_prompt = "Provide accurate and concise responses."
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
     openai_api_key = os.environ.get("OPENAI_API_KEY")
 
-    # Test OpenAI Models
+    # Test OpenAI models
     openai_models = ["o3-mini", "4o", "4o-mini"]
     for model in openai_models:
         chat = Chat(
@@ -316,7 +313,7 @@ if __name__ == "__main__":
         )
         test_model(chat, f"OpenAI {model}")
 
-    # Test Anthropic Models
+    # Test Anthropic models
     anthropic_models = ["haiku", "sonnet"]
     for model in anthropic_models:
         chat = Chat(
@@ -327,7 +324,7 @@ if __name__ == "__main__":
         )
         test_model(chat, f"Anthropic {model}")
 
-    # Test Local Models via LM Studio
+    # Test local models (e.g., running on LM Studio)
     local_models = ["hermes-3-llama-3.2-3b"]
     for model in local_models:
         chat = Chat(
@@ -339,17 +336,17 @@ if __name__ == "__main__":
         )
         test_model(chat, f"Local {model}")
 
-    # Test Prompt Decorator
+    # Test the @prompt decorator with all model types
     print("\nTesting prompt decorator with different models:")
 
-    # Test with OpenAI models
+    # Test OpenAI models with decorator
     for model in openai_models:
         test_decorator(model)
 
-    # Test with Anthropic models
+    # Test Anthropic models with decorator
     for model in anthropic_models:
         test_decorator(model, provider="anthropic")
 
-    # Test with Local models
+    # Test local models with decorator
     for model in local_models:
         test_decorator(model, provider="openai", base_url="http://localhost:1234/v1")
