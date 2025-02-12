@@ -71,9 +71,7 @@ Create 2-3 interaction scenarios that:
 
 
 def _get_translation_prompt(lang, text):
-    return f"""Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original.
-
-    Translate this text into {lang} with the following artistic considerations:
+    return f"""Translate this text into {lang} with the following artistic considerations:
 
 {text}
 
@@ -90,7 +88,7 @@ Guidelines for a masterful translation:
 # Higher temperature for creative, literary translations
 @prompt(**cloud, model="sonnet", temperature=0.7)
 def sonnet(lang, text):
-    """"""
+    """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
     return _get_translation_prompt(lang, text)
 
 
