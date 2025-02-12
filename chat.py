@@ -24,7 +24,7 @@ class AIProvider(ABC):
 
 
 class OpenAIProvider(AIProvider):
-    REASONING_MODELS = {"o1", "o3-mini"}
+    REASONING_MODELS = {"o3-mini"}
 
     def create_client(
         self,
@@ -102,7 +102,6 @@ class Chat:
         "openai": {
             "provider": OpenAIProvider,
             "models": {
-                "o1": "o1",
                 "o3-mini": "o3-mini",
                 "4o": "gpt-4o",
                 "4o-mini": "gpt-4o-mini",
