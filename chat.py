@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from anthropic import Anthropic
 from google import genai
-from google.genai import types as genai_types
+from google.genai.types import GenerateContentConfig
 from openai import OpenAI
 from typing import Optional, Dict, Any, Iterator, List
 import os
+import time
 
 
 class AIProvider(ABC):
@@ -106,11 +107,23 @@ class GoogleProvider(AIProvider):
         return genai.Client(api_key=api_key)
 
     def create_completion(self, stream: bool, **kwargs: Any):
+        contents = []
+        for msg in kwargs["messages"]:
+            if msg["role"] == "user":
+                contents.append(msg["content"])
+            elif msg["role"] == "assistant":
+                contents.append(msg["content"])
+            elif msg["role"] == "system":
+                # Add system message as first content.
+                contents.insert(0, msg["content"])
+
         completion_params = {
             "model": kwargs["model"],
-            "contents": [{"role": "system", "content": kwargs["system"]}]
-            + kwargs["messages"],
-            "temperature": kwargs["temperature"],
+            "contents": contents,
+            "config": GenerateContentConfig(
+                temperature=kwargs["temperature"],
+                max_output_tokens=kwargs["max_tokens"],
+            ),
         }
 
         if stream:
@@ -146,8 +159,8 @@ class Chat:
         "google": {
             "provider": GoogleProvider,
             "models": {
-                "gemini-pro": "gemini-1.5-pro-002",
-                "gemini-pro-vision": "gemini-1.5-pro-vision-002",
+                "gemini-pro": "gemini-2.0-pro-exp-02-05",
+                "gemini-flash": "gemini-2.0-flash-001",
             },
         },
     }
@@ -287,6 +300,8 @@ if __name__ == "__main__":
 
     # Helper function to test basic chat functionality for a given model
     def test_model(chat, model_name):
+        time.sleep(2)
+
         print(f"\nTesting {model_name}:")
         # Test regular non-streaming response
         print("Normal response:")
@@ -300,6 +315,8 @@ if __name__ == "__main__":
 
     # Helper function to test the @prompt decorator functionality
     def test_decorator(model, provider=None, base_url=None):
+        time.sleep(2)
+
         # Test regular non-streaming prompt
         @prompt(
             model=model,
@@ -340,6 +357,7 @@ if __name__ == "__main__":
     system_prompt = "Provide accurate and concise responses."
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
     openai_api_key = os.environ.get("OPENAI_API_KEY")
+    google_api_key = os.environ.get("GOOGLE_API_KEY")
 
     # Test OpenAI models
     openai_models = ["o3-mini", "4o", "4o-mini"]
@@ -363,6 +381,17 @@ if __name__ == "__main__":
         )
         test_model(chat, f"Anthropic {model}")
 
+    # Test Google models
+    google_models = ["gemini-flash", "gemini-pro"]
+    for model in google_models:
+        chat = Chat(
+            model,
+            system=system_prompt,
+            provider="google",
+            api_key=google_api_key,
+        )
+        test_model(chat, f"Google {model}")
+
     # Test local models (e.g., running on LM Studio)
     local_models = ["hermes-3-llama-3.2-3b"]
     for model in local_models:
@@ -385,6 +414,10 @@ if __name__ == "__main__":
     # Test Anthropic models with decorator
     for model in anthropic_models:
         test_decorator(model, provider="anthropic")
+
+    # Test Google models with decorator
+    for model in google_models:
+        test_decorator(model, provider="google")
 
     # Test local models with decorator
     for model in local_models:
