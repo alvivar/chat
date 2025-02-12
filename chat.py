@@ -426,6 +426,6 @@ if __name__ == "__main__":
     for model in google_models:
         test_decorator(model, provider="google")
 
-    # Test local models with decorator
+    # Test local models (LM Studio) with decorator
     for model in local_models:
         test_decorator(model, provider="openai", base_url="http://localhost:1234/v1")
