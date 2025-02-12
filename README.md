@@ -4,7 +4,6 @@ This library aims to provide a unified interface for interacting with various AI
 
 -   A `Chat` class for managing conversations with AI models.
 -   A `@prompt` decorator to simplify prompt creation.
--   Basic caching capabilities to store and reuse responses.
 
 ## Using the `Chat` Class
 
@@ -16,24 +15,26 @@ The `Chat` class allows you to interact with AI models in a conversational manne
 from chat import Chat
 
 chat = Chat(
-    model="gpt-4",
+    model="sonnet",  # or "haiku", "o3-mini", "4o", "4o-mini"
     system="You are a helpful assistant.",
-    provider="openai",  # or "anthropic"
-    max_tokens=512,
+    provider="anthropic",  # or "openai"
+    max_tokens=4096,
     temperature=0.8,
-    use_cache=True  # Enables caching of responses
+    reasoning_effort="high"  # Optional, for specific models
 )
 ```
 
 -   **Parameters:**
-    -   `model`: The AI model to use (e.g., `"gpt-4"`, `"claude-3-haiku-20240307"`).
+    -   `model`: The AI model to use (supported models include):
+        -   Anthropic: `"sonnet"` (claude-3-5-sonnet-20241022), `"haiku"` (claude-3-5-haiku-20241022)
+        -   OpenAI: `"o3-mini"`, `"4o"`, `"4o-mini"`
     -   `system`: The system prompt that defines the assistant's behavior.
     -   `provider`: The AI provider (`"openai"` or `"anthropic"`).
     -   `max_tokens`: Maximum number of tokens for the response.
     -   `temperature`: Controls the randomness of the output.
     -   `base_url`: (Optional) Custom API base URL.
     -   `api_key`: (Optional) API key for the provider.
-    -   `use_cache`: (Optional) Whether to cache responses.
+    -   `reasoning_effort`: (Optional) Controls reasoning depth for supported models.
 
 ### Sending Messages
 
@@ -100,6 +101,7 @@ for chunk in generate_story("a brave knight"):
     -   `temperature`: (Optional) Controls randomness.
     -   `stream`: (Optional) If `True`, streams the response.
     -   `base_url`: (Optional) Custom API base URL.
+    -   `reasoning_effort`: (Optional) Controls reasoning depth for supported models.
 
 -   **Function Parameters:**
     -   Use function arguments to customize prompts dynamically.
@@ -132,15 +134,6 @@ response = chat("What is its population?")
 print(response)  # Assistant uses previous context to answer.
 ```
 
-### Ignoring Cache
-
-To bypass the cache for a specific query:
-
-```python
-response = chat("What is the weather today?", ignore_cache=True)
-print(response)
-```
-
 ## Prerequisites
 
 -   Python 3.7 or higher.
@@ -164,9 +157,11 @@ Alternatively, pass the API key directly when initializing the `Chat` class.
 
 ## Notes
 
--   **Caching:** Responses are cached in `chat_cache.json` in an attempt to reduce API calls.
--   **Providers Supported:** Currently supports OpenAI and Anthropic. We're considering adding support for more providers in the future.
--   **Context:** The `Chat` class attempts to maintain context across messages. The `@prompt` decorator does not maintain context between calls.
+-   **Providers Supported:** Currently supports OpenAI and Anthropic models:
+    -   Anthropic: Claude 3.5 Sonnet and Haiku
+    -   OpenAI: O3-mini, 4O, and 4O-mini
+-   **Context:** The `Chat` class maintains context across messages. The `@prompt` decorator does not maintain context between calls.
+-   **Reasoning Effort:** Some models support adjustable reasoning effort levels ("high", "medium", "low").
 
 ## Testing and Examples
 
