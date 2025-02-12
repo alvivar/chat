@@ -1,13 +1,13 @@
 ## To do
 
--   Add support for Google provider
--   Support for prompt caching (Anthropic, OpenAI)
--   Check that consecutive calls to the decorator maintain the context as expected
--   Add support for Groq provider
--   Ensure proper handling of exceptions throughout the code
+-   [ ] Support for prompt caching (Anthropic, OpenAI)
+-   [ ] Check that consecutive calls to the decorator maintain the context as expected, maybe?
+-   [ ] Add support for Groq provider
+-   [ ] Ensure proper handling of exceptions throughout the code
 
 ## Done
 
+-   [x] Add support for Google provider
 -   [x] Implement and test the decorator functionality across all supported providers:
     -   [x] OpenAI
         -   [x] Support for o3-mini, 4o, and 4o-mini models
