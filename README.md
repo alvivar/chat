@@ -15,7 +15,7 @@ The `Chat` class allows you to interact with AI models in a conversational manne
 from chat import Chat
 
 chat = Chat(
-    model="sonnet",  # or "o3-mini", "gemini-pro", "4o", "haiku", "gemini-flash", "4o-mini"
+    model="sonnet",  # or "4o", "gemini-pro", "o3-mini", "haiku", "4o-mini", "gemini-flash"
     system="You are a helpful assistant.",
     provider="anthropic",  # "openai" or "google"
     max_tokens=4096,
@@ -40,12 +40,7 @@ chat = Chat(
 ### Sending Messages
 
 ```python
-# Single message
-response = chat("Hello, how can I improve my coding skills?")
-print(response)
-
-# Conversation continues
-response = chat("Can you recommend resources for learning Python?")
+response = chat("What's the difference between a list and a tuple in Python?")
 print(response)
 ```
 
@@ -113,15 +108,23 @@ for chunk in generate_story("a brave knight"):
 
 You can use custom or self-hosted models by specifying the `base_url` and `provider`:
 
+This example uses LM Studio (which uses the same provider as OpenAI) and the hermes-3-llama-3.2-3b model.
+
 ```python
 chat = Chat(
-    model="custom-model",
+    model="hermes-3-llama-3.2-3b",
     system="You are a helpful AI assistant.",
-    provider="openai",
+    provider="openai",  # LM Studio is compatible with openai provider
     base_url="http://localhost:1234/v1",
-    api_key="your-api-key"
 )
 ```
+
+It's also super easy to create your own provider by subclassing the `AIProvider` class and implementing the required abstract methods:
+
+-   `create_client`: Set up the API client
+-   `create_completion`: Generate completions with the model
+-   `iter_chunks`: Extract text from streaming responses
+-   `extract_response`: Extract text from non-streaming responses
 
 ### Maintaining Context
 
@@ -144,13 +147,13 @@ print(response)  # Assistant describes Eiffel Tower, Louvre, etc.
 -   API keys for the AI providers you plan to use (e.g., OpenAI, Anthropic, Google).
 -   Installation of necessary packages:
 
-    ```bash
-    pip install openai anthropic google-genai
-    ```
+```bash
+pip install openai anthropic google-genai
+```
 
 ## Setting Up API Keys
 
-Ensure your API keys are set as environment variables:
+Ensure the API keys you are going to use are set as environment variables:
 
 ```bash
 export OPENAI_API_KEY='your-openai-api-key'

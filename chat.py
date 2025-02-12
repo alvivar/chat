@@ -406,9 +406,8 @@ if __name__ == "__main__":
         chat = Chat(
             model,
             system=system_prompt,
-            provider="openai",
+            provider="openai",  # LM Studio is compatible with openai provider
             base_url="http://localhost:1234/v1",
-            api_key="lm-studio",
         )
         test_model(chat, f"Local {model}")
 
