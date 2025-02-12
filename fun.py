@@ -4,10 +4,7 @@ import concurrent.futures
 import os
 
 
-cloud = {
-    "stream": True,
-}
-
+cloud = {"stream": True}
 
 local = {
     "model": "deepseek-r1-distill-qwen-7b",
@@ -57,7 +54,7 @@ Define 4-6 possible abilities/actions that:
 
 
 # Higher temperature for dynamic interactions
-@prompt(**cloud, model="4o", temperature=0.8)
+@prompt(**cloud, model="o3-mini", temperature=0.8)
 def create_character_interactions(characters, abilities):
     """Create scenarios showing character interactions using their abilities."""
     return f"""Using these characters:
@@ -74,7 +71,9 @@ Create 2-3 interaction scenarios that:
 
 
 def _get_translation_prompt(lang, text):
-    return f"""Translate this text into {lang} with the following artistic considerations:
+    return f"""Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original.
+
+    Translate this text into {lang} with the following artistic considerations:
 
 {text}
 
@@ -91,12 +90,18 @@ Guidelines for a masterful translation:
 # Higher temperature for creative, literary translations
 @prompt(**cloud, model="sonnet", temperature=0.7)
 def sonnet(lang, text):
-    """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
+    """"""
     return _get_translation_prompt(lang, text)
 
 
 @prompt(**cloud, model="4o", temperature=0.7)
 def gpt4o(lang, text):
+    """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
+    return _get_translation_prompt(lang, text)
+
+
+@prompt(**cloud, model="gemini-pro", temperature=0.7)
+def gemini(lang, text):
     """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
     return _get_translation_prompt(lang, text)
 
@@ -151,13 +156,17 @@ async def main():
     interactions = stream(create_character_interactions, characters, abilities)
     to_file(interactions, "fun/interactions.md")
 
-    sonnets = stream(sonnet, "spanish", interactions)
+    # Generate translations
+    sonnets, gpt4os, geminis = await asyncio.gather(
+        parallel_stream(sonnet, "spanish", interactions),
+        parallel_stream(gpt4o, "spanish", interactions),
+        parallel_stream(gemini, "spanish", interactions),
+    )
     to_file(sonnets, "fun/sonnet.md")
-
-    gpt4os = stream(gpt4o, "spanish", interactions)
     to_file(gpt4os, "fun/gpt4o.md")
+    to_file(geminis, "fun/gemini.md")
 
-    return rules, characters, abilities, interactions, sonnets, gpt4os
+    return rules, characters, abilities, interactions, sonnets, gpt4os, geminis
 
 
 if __name__ == "__main__":
