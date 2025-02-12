@@ -236,140 +236,103 @@ def prompt(
 
 if __name__ == "__main__":
     """
-    If you run this script, it will execute chat tests for OpenAI, Anthropic,
-    and Hermes (from LM Studio) providers, as well as demonstrate the usage of
-    the prompt decorator.
+    If you run this script, it will execute chat tests for all supported models
+    across providers, testing both normal and streaming responses.
     """
 
-    # Helper functions for testing.
+    def test_model(chat, model_name):
+        print(f"\nTesting {model_name}:")
+        print("Normal response:")
+        print(chat("What color is the sky?"))
 
-    @prompt(model="4o-mini", max_tokens=256, temperature=0.6)
-    def country_info_openai(country: str = "France"):
-        """
-        You are a helpful AI assistant. Provide concise and accurate responses to user queries.
-        """
-
-        return f"What is the capital of {country} and what is its most famous landmark?"
-
-    @prompt(model="4o-mini", max_tokens=256, temperature=0.6, stream=True)
-    def country_info_stream_openai(country: str = "France"):
-        """
-        You are a helpful AI assistant. Provide concise and accurate responses to user queries.
-        """
-
-        return f"What is the capital of {country} and what is its most famous landmark?"
-
-    @prompt(
-        model="hermes-3-llama-3.2-3b",
-        provider="openai",
-        base_url="http://localhost:1234/v1",
-        max_tokens=256,
-        temperature=0.6,
-    )
-    def country_info_hermes(country: str = "France"):
-        """
-        You are a helpful AI assistant. Provide concise and accurate responses to user queries.
-        """
-
-        return f"What is the capital of {country} and what is its most famous landmark?"
-
-    @prompt(
-        model="hermes-3-llama-3.2-3b",
-        provider="openai",
-        base_url="http://localhost:1234/v1",
-        max_tokens=256,
-        temperature=0.6,
-        stream=True,
-    )
-    def country_info_stream_hermes(country: str = "France"):
-        """
-        You are a helpful AI assistant. Provide concise and accurate responses to user queries.
-        """
-
-        return f"What is the capital of {country} and what is its most famous landmark?"
-
-    def stream(chat, text, debug=True):
-        response = ""
-        for chunk in chat(text, stream=True):
-            response += chunk
-            if debug:
-                print(chunk, end="", flush=True)
-        return response
-
-    def chat_test(chat, name):
-        print(f"{name} Test:")
-
-        response = chat("What is the capital of the moon?")
-        print(response)
-
-        print("\n----\n")
-        print(f"{name} Streaming Test:")
-
-        for chunk in chat("Are you sure?", stream=True):
+        print("\nStreaming response:")
+        for chunk in chat("What color is grass?", stream=True):
             print(chunk, end="", flush=True)
+        print("\n")
 
-        print("\n\n----\n")
+    def test_decorator(model, provider=None, base_url=None):
+        @prompt(
+            model=model,
+            provider=provider,
+            base_url=base_url,
+            max_tokens=256,
+            temperature=0.6,
+        )
+        def simple_question():
+            """You are a helpful AI assistant. Provide concise and accurate responses."""
+            return "What color is the sun?"
 
-    # Set up!
+        @prompt(
+            model=model,
+            provider=provider,
+            base_url=base_url,
+            max_tokens=256,
+            temperature=0.6,
+            stream=True,
+        )
+        def simple_question_stream():
+            """You are a helpful AI assistant. Provide concise and accurate responses."""
+            return "What color is the moon?"
+
+        print(f"\nTesting {model} normal response:")
+        print(simple_question())
+
+        print(f"\nTesting {model} streaming response:")
+        for chunk in simple_question_stream():
+            print(chunk, end="", flush=True)
+        print("\n")
+
+    # Setup
 
     system_prompt = "Provide accurate and concise responses."
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
     openai_api_key = os.environ.get("OPENAI_API_KEY")
 
-    # OpenAI
+    # Test OpenAI Models
+    openai_models = ["o3-mini", "4o", "4o-mini"]
+    for model in openai_models:
+        chat = Chat(
+            model,
+            system=system_prompt,
+            provider="openai",
+            api_key=openai_api_key,
+        )
+        test_model(chat, f"OpenAI {model}")
 
-    openai_chat = Chat(
-        "4o-mini",
-        system=system_prompt,
-        provider="openai",
-        api_key=openai_api_key,
-    )
+    # Test Anthropic Models
+    anthropic_models = ["haiku", "sonnet"]
+    for model in anthropic_models:
+        chat = Chat(
+            model,
+            system=system_prompt,
+            provider="anthropic",
+            api_key=anthropic_api_key,
+        )
+        test_model(chat, f"Anthropic {model}")
 
-    chat_test(openai_chat, "OpenAI")
+    # Test Local Models via LM Studio
+    local_models = ["hermes-3-llama-3.2-3b"]
+    for model in local_models:
+        chat = Chat(
+            model,
+            system=system_prompt,
+            provider="openai",
+            base_url="http://localhost:1234/v1",
+            api_key="lm-studio",
+        )
+        test_model(chat, f"Local {model}")
 
-    # Anthropic
+    # Test Prompt Decorator
+    print("\nTesting prompt decorator with different models:")
 
-    anthropic_chat = Chat(
-        "haiku",
-        system=system_prompt,
-        provider="anthropic",
-        api_key=anthropic_api_key,
-    )
+    # Test with OpenAI models
+    for model in openai_models:
+        test_decorator(model)
 
-    chat_test(anthropic_chat, "Anthropic")
+    # Test with Anthropic models
+    for model in anthropic_models:
+        test_decorator(model, provider="anthropic")
 
-    # Hermes (OpenAI compatible) from LM Studio
-
-    hermes_chat = Chat(
-        "hermes-3-llama-3.2-3b",
-        system=system_prompt,
-        provider="openai",
-        base_url="http://localhost:1234/v1",
-        api_key="lm-studio",
-    )
-
-    chat_test(hermes_chat, "Hermes")
-
-    # Testing the prompt decorator.
-
-    print("Prompt Decorator Test:")
-    print(country_info_openai("Moon"))
-
-    print("\n----\n")
-
-    print("Prompt Decorator Streaming Test:")
-    for chunk in country_info_stream_openai("Moon"):
-        print(chunk, end="", flush=True)
-
-    print("\n----\n")
-
-    # Testing the prompt decorator with Hermes from LM Studio.
-
-    print("Prompt Decorator with Hermes Test:")
-    print(country_info_hermes("Sun"))
-
-    print("\n----\n")
-
-    print("Prompt Decorator with Hermes Streaming Test:")
-    for chunk in country_info_stream_hermes("Sun"):
-        print(chunk, end="", flush=True)
+    # Test with Local models
+    for model in local_models:
+        test_decorator(model, provider="openai", base_url="http://localhost:1234/v1")
