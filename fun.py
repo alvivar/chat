@@ -1,10 +1,10 @@
 from chat import prompt
 import asyncio
 import concurrent.futures
+import os
 
 
 cloud = {
-    "model": "4o-mini",
     "stream": True,
 }
 
@@ -16,31 +16,89 @@ local = {
     "stream": True,
 }
 
-current = cloud
 
-
-@prompt(**current, temperature=0.9)
+# Lower temperature for consistent world-building
+@prompt(**cloud, model="o3-mini", temperature=0.6)
 def define_system_rules():
-    """Define the core rules and mechanics of a fictional system or world."""
-    return "Create 3-5 fundamental rules that govern this fictional world/system."
+    """Define the core rules and mechanics of a fictional Dark Fantasy system or world."""
+    return """Create 3-5 fundamental rules that govern this fictional world/system. The rules should be:
+1. Internally consistent and logically connected
+2. Specific enough to create interesting constraints
+3. General enough to allow creative possibilities
+4. Free of contradictions or paradoxes"""
 
 
-@prompt(**current, temperature=0.9)
+# Balanced temperature for creative but grounded characters
+@prompt(**cloud, model="o3-mini", temperature=0.7)
 def create_character_profiles(rules):
     """Generate character profiles that exist within the defined system."""
-    return f"Based on these system rules:\n{rules}\n\nCreate 2-3 character profiles with unique traits and motivations."
+    return f"""Based on these system rules:
+{rules}
+
+Create 2-3 detailed character profiles including:
+- Distinct personality traits and motivations
+- How they specifically interact with the system rules
+- Their goals and conflicts within the world
+- Relationships or connections to other potential characters"""
 
 
-@prompt(**current, temperature=0.9)
+# Moderate temperature for well-defined abilities
+@prompt(**cloud, model="o3-mini", temperature=0.65)
 def define_character_abilities(rules):
     """Define possible actions and abilities for characters within the system."""
-    return f"Given these system rules:\n{rules}\n\nList 4-6 possible actions/abilities characters could have."
+    return f"""Given these system rules:
+{rules}
+
+Define 4-6 possible abilities/actions that:
+1. Naturally emerge from or connect to the system rules
+2. Have clear limitations and costs
+3. Create interesting strategic choices
+4. Could be used in multiple ways"""
 
 
-@prompt(**current, temperature=0.9)
+# Higher temperature for dynamic interactions
+@prompt(**cloud, model="4o", temperature=0.8)
 def create_character_interactions(characters, abilities):
     """Create scenarios showing character interactions using their abilities."""
-    return f"Using these characters:\n{characters}\n\nAnd these abilities:\n{abilities}\n\nCreate 2-3 interaction scenarios."
+    return f"""Using these characters:
+{characters}
+
+And these abilities:
+{abilities}
+
+Create 2-3 interaction scenarios that:
+1. Demonstrate creative use of abilities
+2. Reveal character motivations and relationships
+3. Create dramatic tension or conflict
+4. Remain consistent with the established rules"""
+
+
+def _get_translation_prompt(lang, text):
+    return f"""Translate this text into {lang} with the following artistic considerations:
+
+{text}
+
+Guidelines for a masterful translation:
+- Craft flowing, poetic language that captures the original's spirit
+- Preserve literary devices, metaphors and imagery
+- Maintain the author's unique voice and stylistic flourishes
+- Keep character names and key terms authentic
+- Adapt cultural references thoughtfully and gracefully
+- Ensure the translation reads as polished, published literature
+- Balance faithfulness to source with artistic expression"""
+
+
+# Higher temperature for creative, literary translations
+@prompt(**cloud, model="sonnet", temperature=0.7)
+def sonnet(lang, text):
+    """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
+    return _get_translation_prompt(lang, text)
+
+
+@prompt(**cloud, model="4o", temperature=0.7)
+def gpt4o(lang, text):
+    """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
+    return _get_translation_prompt(lang, text)
 
 
 def stream(prompt_function, *args):
@@ -55,31 +113,51 @@ def stream(prompt_function, *args):
 
 
 def to_file(data: str, filename: str) -> bool:
+    """Write data to a file with error handling."""
     try:
         with open(filename, "w", encoding="utf-8") as file:
             file.write(data)
         return True
     except IOError as e:
+        print(f"Error writing to {filename}: {e}")
         return False
 
 
 async def parallel_stream(prompt_function, *args):
+    """Execute stream function in a separate thread to allow parallelization."""
     loop = asyncio.get_event_loop()
     with concurrent.futures.ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, stream, prompt_function, *args)
 
 
 async def main():
-    rules = stream(define_system_rules)
+    # Setup output directory
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    os.makedirs("fun", exist_ok=True)
 
+    # Generate world rules
+    rules = stream(define_system_rules)
+    to_file(rules, "fun/rules.md")
+
+    # Parallel generation of characters and abilities
     characters, abilities = await asyncio.gather(
         parallel_stream(create_character_profiles, rules),
         parallel_stream(define_character_abilities, rules),
     )
+    to_file(characters, "fun/characters.md")
+    to_file(abilities, "fun/abilities.md")
 
+    # Create interactions and translations
     interactions = stream(create_character_interactions, characters, abilities)
+    to_file(interactions, "fun/interactions.md")
 
-    return rules, characters, abilities, interactions
+    sonnets = stream(sonnet, "spanish", interactions)
+    to_file(sonnets, "fun/sonnet.md")
+
+    gpt4os = stream(gpt4o, "spanish", interactions)
+    to_file(gpt4os, "fun/gpt4o.md")
+
+    return rules, characters, abilities, interactions, sonnets, gpt4os
 
 
 if __name__ == "__main__":
