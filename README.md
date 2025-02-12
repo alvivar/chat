@@ -1,6 +1,6 @@
 # chat.py
 
-This library aims to provide a unified interface for interacting with various AI language models across different providers like OpenAI, Anthropic, and Google. It offers:
+A simple, unified API for interacting with AI language models from multiple providers (OpenAI, Anthropic, and Google). It offers:
 
 -   A `Chat` class for managing conversations with AI models.
 -   A `@prompt` decorator to simplify prompt creation.
@@ -15,12 +15,12 @@ The `Chat` class allows you to interact with AI models in a conversational manne
 from chat import Chat
 
 chat = Chat(
-    model="sonnet",  # or "haiku", "gemini-pro", "o3-mini", "4o", "4o-mini"
+    model="sonnet",  # or "o3-mini", "gemini-pro", "4o", "haiku", "gemini-flash", "4o-mini"
     system="You are a helpful assistant.",
-    provider="anthropic",  # or "openai" or "google"
+    provider="anthropic",  # "openai" or "google"
     max_tokens=4096,
     temperature=0.8,
-    reasoning_effort="high"  # Optional, for specific models
+    reasoning_effort="high"  # Optional, for reasoning models
 )
 ```
 
@@ -116,7 +116,7 @@ You can use custom or self-hosted models by specifying the `base_url` and `provi
 ```python
 chat = Chat(
     model="custom-model",
-    system="You are a helpful assistant.",
+    system="You are a helpful AI assistant.",
     provider="openai",
     base_url="http://localhost:1234/v1",
     api_key="your-api-key"
@@ -129,10 +129,13 @@ The `Chat` class maintains the conversation context:
 
 ```python
 response = chat("What's the capital of France?")
-print(response)  # Assistant provides the capital.
+print(response)  # Paris
 
-response = chat("What is its population?")
-print(response)  # Assistant uses previous context to answer.
+response = chat("What's the weather like there?")
+print(response)  # Assistant discusses weather in Paris
+
+response = chat("Tell me about its famous landmarks")
+print(response)  # Assistant describes Eiffel Tower, Louvre, etc.
 ```
 
 ## Prerequisites
