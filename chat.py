@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from anthropic import Anthropic
 from openai import OpenAI
 from typing import Optional, Dict, Any, Iterator, List
-import hashlib
-import json
 import os
 
 
@@ -117,7 +115,6 @@ class Chat:
         provider: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        use_cache: bool = False,
     ):
         self.provider = self._get_provider(model, provider)
         self.client = self.provider.create_client(base_url, api_key)
@@ -126,10 +123,7 @@ class Chat:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.api_key = api_key
-
         self.messages: List[Dict[str, str]] = []
-        self.use_cache = use_cache
-        self.cache = self._initialize_cache() if use_cache else None
 
     def _get_provider(self, model: str, provider: Optional[str]) -> AIProvider:
         if provider:
@@ -171,36 +165,18 @@ class Chat:
         self,
         user_message: str,
         stream: bool = False,
-        ignore_cache: bool = False,
     ):
         self.messages.append({"role": "user", "content": user_message})
+        return self._generate_new_response(stream)
 
-        if self.use_cache and not ignore_cache:
-            if cached_response := self._get_cached_response():
-                return cached_response
-
-        return self._generate_new_response(stream, ignore_cache)
-
-    def _get_cached_response(self) -> Optional[str]:
-        cache_key = self._generate_cache_key()
-        if self.cache and cache_key in self.cache:
-            cached_response = self.cache[cache_key]
-            self.messages.append({"role": "assistant", "content": cached_response})
-            return cached_response
-        return None
-
-    def _generate_new_response(self, stream: bool, ignore_cache: bool):
-        cache_key = (
-            self._generate_cache_key() if self.use_cache and not ignore_cache else None
-        )
+    def _generate_new_response(self, stream: bool):
         completion = self._create_completion(stream)
 
         if stream:
-            return self._stream_response(completion, cache_key)
+            return self._stream_response(completion)
 
         response = self.provider.extract_response(completion)
-        self._update_messages_and_cache(response, cache_key)
-
+        self.messages.append({"role": "assistant", "content": response})
         return response
 
     def _create_completion(self, stream: bool):
@@ -214,41 +190,13 @@ class Chat:
             system=self.system,
         )
 
-    def _stream_response(self, completion, cache_key: Optional[str]):
+    def _stream_response(self, completion):
         full_response = []
         for chunk in self.provider.iter_chunks(completion):
             full_response.append(chunk)
             yield chunk
         full_response_str = "".join(full_response)
-        self._update_messages_and_cache(full_response_str, cache_key)
-
-    def _update_messages_and_cache(self, response: str, cache_key: Optional[str]):
-        self.messages.append({"role": "assistant", "content": response})
-        if cache_key is not None:
-            self._cache_response(cache_key, response)
-
-    def _generate_cache_key(self) -> str:
-        requirements = [self.model, self.system] + self.messages
-        return hashlib.md5(json.dumps(requirements).encode()).hexdigest()
-
-    def _initialize_cache(self) -> Dict[str, str]:
-        self.cache_file = os.path.join(os.path.dirname(__file__), "chat_cache.json")
-        try:
-            if os.path.exists(self.cache_file):
-                with open(self.cache_file, "r") as f:
-                    return json.load(f)
-        except (IOError, json.JSONDecodeError) as e:
-            print(
-                f"There was an issue initializing the cache: {e}. "
-                "We'll start with an empty cache."
-            )
-        return {}
-
-    def _cache_response(self, cache_key: str, response: str):
-        if self.cache is not None:
-            self.cache[cache_key] = response
-            with open(self.cache_file, "w") as f:
-                json.dump(self.cache, f)
+        self.messages.append({"role": "assistant", "content": full_response_str})
 
 
 def prompt(
@@ -312,7 +260,7 @@ if __name__ == "__main__":
         return f"What is the capital of {country} and what is its most famous landmark?"
 
     @prompt(
-        model="deepseek-r1-distill-qwen-7b",
+        model="hermes-3-llama-3.2-3b",
         provider="openai",
         base_url="http://localhost:1234/v1",
         max_tokens=256,
@@ -326,7 +274,7 @@ if __name__ == "__main__":
         return f"What is the capital of {country} and what is its most famous landmark?"
 
     @prompt(
-        model="deepseek-r1-distill-qwen-7b",
+        model="hermes-3-llama-3.2-3b",
         provider="openai",
         base_url="http://localhost:1234/v1",
         max_tokens=256,
@@ -348,23 +296,16 @@ if __name__ == "__main__":
                 print(chunk, end="", flush=True)
         return response
 
-    def chat_test(chat, name, ignore_cache=False):
+    def chat_test(chat, name):
         print(f"{name} Test:")
 
-        response = chat(
-            "What is the capital of the moon?",
-            ignore_cache=ignore_cache,
-        )
+        response = chat("What is the capital of the moon?")
         print(response)
 
         print("\n----\n")
         print(f"{name} Streaming Test:")
 
-        for chunk in chat(
-            "Are you sure?",
-            stream=True,
-            ignore_cache=ignore_cache,
-        ):
+        for chunk in chat("Are you sure?", stream=True):
             print(chunk, end="", flush=True)
 
         print("\n\n----\n")
@@ -382,7 +323,6 @@ if __name__ == "__main__":
         system=system_prompt,
         provider="openai",
         api_key=openai_api_key,
-        use_cache=True,
     )
 
     chat_test(openai_chat, "OpenAI")
@@ -394,7 +334,6 @@ if __name__ == "__main__":
         system=system_prompt,
         provider="anthropic",
         api_key=anthropic_api_key,
-        use_cache=True,
     )
 
     chat_test(anthropic_chat, "Anthropic")
@@ -402,12 +341,11 @@ if __name__ == "__main__":
     # Hermes (OpenAI compatible) from LM Studio
 
     hermes_chat = Chat(
-        "deepseek-r1-distill-qwen-7b-GGUF",
+        "hermes-3-llama-3.2-3b",
         system=system_prompt,
         provider="openai",
         base_url="http://localhost:1234/v1",
         api_key="lm-studio",
-        use_cache=True,
     )
 
     chat_test(hermes_chat, "Hermes")
