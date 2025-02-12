@@ -141,27 +141,17 @@ response = chat("Tell me about its famous landmarks")
 print(response)  # Assistant describes Eiffel Tower, Louvre, etc.
 ```
 
-## Prerequisites
+## Getting Started
 
--   Python 3.7 or higher.
--   API keys for the AI providers you plan to use (e.g., OpenAI, Anthropic, Google).
--   Installation of necessary packages:
-
-```bash
-pip install openai anthropic google-genai
-```
-
-## Setting Up API Keys
-
-Ensure the API keys you are going to use are set as environment variables:
-
-```bash
-export OPENAI_API_KEY='your-openai-api-key'
-export ANTHROPIC_API_KEY='your-anthropic-api-key'
-export GOOGLE_API_KEY='your-google-api-key'
-```
-
-Alternatively, pass the API key directly when initializing the `Chat` class.
+-   Python 3.7+
+-   Install required packages: `pip install openai anthropic google-genai`
+-   Set up API keys as environment variables:
+    ```bash
+    export OPENAI_API_KEY='your-key'
+    export ANTHROPIC_API_KEY='your-key'
+    export GOOGLE_API_KEY='your-key'
+    ```
+    Or pass keys directly when initializing `Chat`
 
 ## Notes
 
