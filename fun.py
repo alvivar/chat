@@ -117,7 +117,7 @@ def stream(prompt_function, *args):
     return response
 
 
-def to_file(data: str, filename: str) -> bool:
+def dump(data: str, filename: str) -> bool:
     """Write data to a file with error handling."""
     try:
         with open(filename, "w", encoding="utf-8") as file:
@@ -142,19 +142,19 @@ async def main():
 
     # Generate world rules
     rules = stream(define_system_rules)
-    to_file(rules, "fun/rules.md")
+    dump(rules, "fun/rules.md")
 
     # Parallel generation of characters and abilities
     characters, abilities = await asyncio.gather(
         parallel_stream(create_character_profiles, rules),
         parallel_stream(define_character_abilities, rules),
     )
-    to_file(characters, "fun/characters.md")
-    to_file(abilities, "fun/abilities.md")
+    dump(characters, "fun/characters.md")
+    dump(abilities, "fun/abilities.md")
 
     # Create interactions and translations
     interactions = stream(create_character_interactions, characters, abilities)
-    to_file(interactions, "fun/interactions.md")
+    dump(interactions, "fun/interactions.md")
 
     # Generate translations
     sonnets, gpt4os, geminis = await asyncio.gather(
@@ -162,9 +162,9 @@ async def main():
         parallel_stream(gpt4o, "spanish", interactions),
         parallel_stream(gemini, "spanish", interactions),
     )
-    to_file(sonnets, "fun/sonnet.md")
-    to_file(gpt4os, "fun/gpt4o.md")
-    to_file(geminis, "fun/gemini.md")
+    dump(sonnets, "fun/sonnet.md")
+    dump(gpt4os, "fun/gpt4o.md")
+    dump(geminis, "fun/gemini.md")
 
     return rules, characters, abilities, interactions, sonnets, gpt4os, geminis
 
