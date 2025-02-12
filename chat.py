@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from anthropic import Anthropic
+from google import genai
+from google.genai import types as genai_types
 from openai import OpenAI
 from typing import Optional, Dict, Any, Iterator, List
 import os
@@ -94,6 +96,36 @@ class AnthropicProvider(AIProvider):
         return completion.content[0].text
 
 
+class GoogleProvider(AIProvider):
+    def create_client(
+        self,
+        base_url: Optional[str],
+        api_key: Optional[str],
+    ) -> genai.Client:
+        api_key = api_key or os.environ.get("GOOGLE_API_KEY")
+        return genai.Client(api_key=api_key)
+
+    def create_completion(self, stream: bool, **kwargs: Any):
+        completion_params = {
+            "model": kwargs["model"],
+            "contents": [{"role": "system", "content": kwargs["system"]}]
+            + kwargs["messages"],
+            "temperature": kwargs["temperature"],
+        }
+
+        if stream:
+            return kwargs["client"].models.generate_content_stream(**completion_params)
+        return kwargs["client"].models.generate_content(**completion_params)
+
+    def iter_chunks(self, completion: Any) -> Iterator[str]:
+        for chunk in completion:
+            if chunk.text:
+                yield chunk.text
+
+    def extract_response(self, completion: Any) -> str:
+        return completion.text
+
+
 class Chat:
     PROVIDER_MAP = {
         "openai": {
@@ -109,6 +141,13 @@ class Chat:
             "models": {
                 "sonnet": "claude-3-5-sonnet-20241022",
                 "haiku": "claude-3-5-haiku-20241022",
+            },
+        },
+        "google": {
+            "provider": GoogleProvider,
+            "models": {
+                "gemini-pro": "gemini-1.5-pro-002",
+                "gemini-pro-vision": "gemini-1.5-pro-vision-002",
             },
         },
     }
