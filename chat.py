@@ -34,16 +34,16 @@ class OpenAIProvider(AIProvider):
         base_url: Optional[str],
         api_key: Optional[str],
     ) -> OpenAI:
-        api_key = api_key or os.environ.get("OPENAI_API_KEY")
-        return OpenAI(base_url=base_url, api_key=api_key)
+        return OpenAI(
+            base_url=base_url,
+            api_key=api_key or os.environ.get("OPENAI_API_KEY"),
+        )
 
     def create_completion(self, stream: bool, **kwargs: Any):
-        messages = [{"role": "system", "content": kwargs["system"]}] + kwargs[
-            "messages"
-        ]
         completion_params = {
             "model": kwargs["model"],
-            "messages": messages,
+            "messages": [{"role": "system", "content": kwargs["system"]}]
+            + kwargs["messages"],
             "stream": stream,
         }
 
@@ -52,15 +52,21 @@ class OpenAIProvider(AIProvider):
                 "reasoning_effort", "high"
             )
         else:
-            completion_params["max_tokens"] = kwargs["max_tokens"]
-            completion_params["temperature"] = kwargs["temperature"]
+            completion_params.update(
+                {
+                    "max_tokens": kwargs["max_tokens"],
+                    "temperature": kwargs["temperature"],
+                }
+            )
 
         return kwargs["client"].chat.completions.create(**completion_params)
 
     def iter_chunks(self, completion: Any) -> Iterator[str]:
-        for chunk in completion:
-            if content := chunk.choices[0].delta.content:
-                yield content
+        return (
+            chunk.choices[0].delta.content
+            for chunk in completion
+            if chunk.choices[0].delta.content
+        )
 
     def extract_response(self, completion: Any) -> str:
         return completion.choices[0].message.content
@@ -72,22 +78,18 @@ class AnthropicProvider(AIProvider):
         base_url: Optional[str],
         api_key: Optional[str],
     ) -> Anthropic:
-        api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        return Anthropic(api_key=api_key)
+        return Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
 
     def create_completion(self, stream: bool, **kwargs: Any):
-        common_params = {
+        params = {
             "model": kwargs["model"],
             "messages": kwargs["messages"],
             "max_tokens": kwargs["max_tokens"],
             "temperature": kwargs["temperature"],
             "system": kwargs["system"],
         }
-        return (
-            kwargs["client"].messages.stream(**common_params)
-            if stream
-            else kwargs["client"].messages.create(**common_params)
-        )
+        client = kwargs["client"].messages
+        return client.stream(**params) if stream else client.create(**params)
 
     def iter_chunks(self, completion: Any) -> Iterator[str]:
         with completion as stream:
@@ -103,37 +105,38 @@ class GoogleProvider(AIProvider):
         base_url: Optional[str],
         api_key: Optional[str],
     ) -> genai.Client:
-        api_key = api_key or os.environ.get("GOOGLE_API_KEY")
-        return genai.Client(api_key=api_key)
+        return genai.Client(api_key=api_key or os.environ.get("GOOGLE_API_KEY"))
 
     def create_completion(self, stream: bool, **kwargs: Any):
         contents = []
+        system_instruction = None
+
         for msg in kwargs["messages"]:
-            if msg["role"] == "user":
-                contents.append(msg["content"])
-            elif msg["role"] == "assistant":
-                contents.append(msg["content"])
-            elif msg["role"] == "system":
-                # Add system message as first content.
-                contents.insert(0, msg["content"])
+            role, content = msg["role"], msg["content"]
+            if role == "system":
+                system_instruction = content
+            elif role in ("user", "assistant"):
+                contents.append(content)
 
         completion_params = {
             "model": kwargs["model"],
             "contents": contents,
             "config": GenerateContentConfig(
+                system_instruction=system_instruction,
                 temperature=kwargs["temperature"],
                 max_output_tokens=kwargs["max_tokens"],
             ),
         }
 
-        if stream:
-            return kwargs["client"].models.generate_content_stream(**completion_params)
-        return kwargs["client"].models.generate_content(**completion_params)
+        models = kwargs["client"].models
+        return (
+            models.generate_content_stream(**completion_params)
+            if stream
+            else models.generate_content(**completion_params)
+        )
 
     def iter_chunks(self, completion: Any) -> Iterator[str]:
-        for chunk in completion:
-            if chunk.text:
-                yield chunk.text
+        return (chunk.text for chunk in completion if chunk.text)
 
     def extract_response(self, completion: Any) -> str:
         return completion.text
@@ -294,8 +297,12 @@ def prompt(
 
 if __name__ == "__main__":
     """
-    If you run this script, it will execute chat tests for all supported models
-    across providers, testing both normal and streaming responses.
+    When you run this script, it will execute chat tests for all supported
+    models across providers, testing both normal and streaming responses,
+    including the @prompt decorator.
+
+    Remember to set the environment variables for the API keys before running.
+    The local models were tested with LM Studio - use your favorite.
     """
 
     # Helper function to test basic chat functionality for a given model
