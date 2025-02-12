@@ -88,32 +88,23 @@ class AnthropicProvider(AIProvider):
         return completion.content[0].text
 
 
-# TODO:
-# - Add Groq
-# - Add Anthropic AWS Bedrock
-# - Add Google?
-
-
 class Chat:
     PROVIDER_MAP = {
         "openai": {
             "provider": OpenAIProvider,
-            "models": [
-                "gpt-3.5-turbo",
-                "gpt-4-turbo",
-                "gpt-4",
-                "gpt-4o-mini",
-                "gpt-4o",
-            ],
+            "models": {
+                "o1": "o1",
+                "o3-mini": "o3-mini",
+                "4o": "gpt-4o",
+                "4o-mini": "gpt-4o-mini",
+            },
         },
         "anthropic": {
             "provider": AnthropicProvider,
-            "models": [
-                "claude-3-haiku-20240307",
-                "claude-3-opus-20240229",
-                "claude-3-sonnet-20240229",
-                "claude-3-5-sonnet-20240620",
-            ],
+            "models": {
+                "sonnet": "claude-3-5-sonnet-20241022",
+                "haiku": "claude-3-5-haiku-20241022",
+            },
         },
     }
 
@@ -130,7 +121,7 @@ class Chat:
     ):
         self.provider = self._get_provider(model, provider)
         self.client = self.provider.create_client(base_url, api_key)
-        self.model = model
+        self.model = self._resolve_model_name(model, provider)
         self.system = system
         self.max_tokens = max_tokens
         self.temperature = temperature
@@ -149,14 +140,32 @@ class Chat:
                 )
             return self.PROVIDER_MAP[provider]["provider"]()
 
+        # Check both nicknames and full model names
         for provider_info in self.PROVIDER_MAP.values():
-            if model in provider_info["models"]:
+            models = provider_info["models"]
+            if model in models.keys() or model in models.values():
                 return provider_info["provider"]()
 
         raise ValueError(
             f"The model '{model}' isn't supported. "
             "If you're using a custom model, specify a compatible provider and base_url."
         )
+
+    def _resolve_model_name(self, model: str, provider: Optional[str]) -> str:
+        if provider:
+            provider_info = self.PROVIDER_MAP[provider]
+        else:
+            # Find the provider info by checking both nicknames and full names
+            for p_info in self.PROVIDER_MAP.values():
+                models = p_info["models"]
+                if model in models.keys() or model in models.values():
+                    provider_info = p_info
+                    break
+            else:
+                return model  # Return original model name if not found in mappings
+
+        # If model is a nickname, get full name, otherwise return original model name
+        return provider_info["models"].get(model, model)
 
     def __call__(
         self,
@@ -286,7 +295,7 @@ if __name__ == "__main__":
 
     # Helper functions for testing.
 
-    @prompt(model="gpt-4o-mini", max_tokens=256, temperature=0.6)
+    @prompt(model="4o-mini", max_tokens=256, temperature=0.6)
     def country_info_openai(country: str = "France"):
         """
         You are a helpful AI assistant. Provide concise and accurate responses to user queries.
@@ -294,7 +303,7 @@ if __name__ == "__main__":
 
         return f"What is the capital of {country} and what is its most famous landmark?"
 
-    @prompt(model="gpt-4o-mini", max_tokens=256, temperature=0.6, stream=True)
+    @prompt(model="4o-mini", max_tokens=256, temperature=0.6, stream=True)
     def country_info_stream_openai(country: str = "France"):
         """
         You are a helpful AI assistant. Provide concise and accurate responses to user queries.
@@ -303,7 +312,7 @@ if __name__ == "__main__":
         return f"What is the capital of {country} and what is its most famous landmark?"
 
     @prompt(
-        model="hermes-3-llama-3.1-8b",
+        model="deepseek-r1-distill-qwen-7b",
         provider="openai",
         base_url="http://localhost:1234/v1",
         max_tokens=256,
@@ -317,7 +326,7 @@ if __name__ == "__main__":
         return f"What is the capital of {country} and what is its most famous landmark?"
 
     @prompt(
-        model="hermes-3-llama-3.1-8b",
+        model="deepseek-r1-distill-qwen-7b",
         provider="openai",
         base_url="http://localhost:1234/v1",
         max_tokens=256,
@@ -369,7 +378,7 @@ if __name__ == "__main__":
     # OpenAI
 
     openai_chat = Chat(
-        "gpt-4o-mini",
+        "4o-mini",
         system=system_prompt,
         provider="openai",
         api_key=openai_api_key,
@@ -381,7 +390,7 @@ if __name__ == "__main__":
     # Anthropic
 
     anthropic_chat = Chat(
-        "claude-3-haiku-20240307",
+        "haiku",
         system=system_prompt,
         provider="anthropic",
         api_key=anthropic_api_key,
@@ -393,7 +402,7 @@ if __name__ == "__main__":
     # Hermes (OpenAI compatible) from LM Studio
 
     hermes_chat = Chat(
-        "NousResearch/Hermes-3-Llama-3.1-8B-GGUF",
+        "deepseek-r1-distill-qwen-7b-GGUF",
         system=system_prompt,
         provider="openai",
         base_url="http://localhost:1234/v1",
