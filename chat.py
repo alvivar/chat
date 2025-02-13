@@ -266,6 +266,7 @@ def prompt(
     max_tokens=4096,
     temperature=0.8,
     reasoning_effort="high",
+    api_key="none",
     stream=False,
 ):
     def decorator(func):
@@ -276,9 +277,10 @@ def prompt(
             system=system_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
+            reasoning_effort=reasoning_effort,
             provider=provider,
             base_url=base_url,
-            reasoning_effort=reasoning_effort,
+            api_key=api_key,
         )
 
         def wrapper(*args, **kwargs):
