@@ -17,7 +17,7 @@ local = {
 # Lower temperature for consistent world-building
 @prompt(**cloud, model="o3-mini", temperature=0.6)
 def define_system_rules():
-    """Define the core rules and mechanics of a fictional Dark Fantasy system or world."""
+    """Define the core rules and mechanics of a fictional system or world."""
     return """Create 3-5 fundamental rules that govern this fictional world/system. The rules should be:
 1. Internally consistent and logically connected
 2. Specific enough to create interesting constraints
@@ -126,8 +126,8 @@ def dump(data: str, filename: str) -> bool:
         return False
 
 
-async def parallel_stream(prompt_function, *args):
-    """Execute stream function in a separate thread to allow parallelization."""
+async def async_stream(prompt_function, *args):
+    """Execute stream function in a separate thread to allow concurrent execution."""
     loop = asyncio.get_event_loop()
     with concurrent.futures.ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, stream, prompt_function, *args)
@@ -142,10 +142,10 @@ async def main():
     rules = stream(define_system_rules)
     dump(rules, "fun/rules.md")
 
-    # Parallel generation of characters and abilities
+    # Async generation of characters and abilities
     characters, abilities = await asyncio.gather(
-        parallel_stream(create_character_profiles, rules),
-        parallel_stream(define_character_abilities, rules),
+        async_stream(create_character_profiles, rules),
+        async_stream(define_character_abilities, rules),
     )
     dump(characters, "fun/characters.md")
     dump(abilities, "fun/abilities.md")
@@ -154,11 +154,11 @@ async def main():
     interactions = stream(create_character_interactions, characters, abilities)
     dump(interactions, "fun/interactions.md")
 
-    # Generate translations
+    # Async generation of translations
     sonnets, gpt4os, geminis = await asyncio.gather(
-        parallel_stream(sonnet, "spanish", interactions),
-        parallel_stream(gpt4o, "spanish", interactions),
-        parallel_stream(gemini, "spanish", interactions),
+        async_stream(sonnet, "spanish", interactions),
+        async_stream(gpt4o, "spanish", interactions),
+        async_stream(gemini, "spanish", interactions),
     )
     dump(sonnets, "fun/sonnet.md")
     dump(gpt4os, "fun/gpt4o.md")
