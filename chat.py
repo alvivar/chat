@@ -35,9 +35,10 @@ class OpenAIProvider(AIProvider):
         base_url: Optional[str],
         api_key: Optional[str],
     ) -> OpenAI:
+        # "None" means the client uses the OpenAI library but is not connecting to OpenAI's API.
         return OpenAI(
             base_url=base_url,
-            api_key=api_key or os.environ.get("OPENAI_API_KEY"),
+            api_key=api_key or os.environ.get("OPENAI_API_KEY") or "None",
         )
 
     def create_completion(self, stream: bool, **kwargs: Any):
@@ -266,7 +267,7 @@ def prompt(
     max_tokens=4096,
     temperature=0.8,
     reasoning_effort="high",
-    api_key="none",
+    api_key=None,
     stream=False,
 ):
     def decorator(func):
