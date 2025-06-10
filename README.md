@@ -25,7 +25,7 @@ export GEMINI_API_KEY='your-key'  # Note: uses GEMINI_API_KEY, not GOOGLE_API_KE
 ### Basic Usage
 
 ```python
-from chat import Chat
+from src.chat import Chat
 
 # Simple conversation
 chat = Chat(model="sonnet3.5")
@@ -41,13 +41,13 @@ for chunk in chat("Explain quantum computing", stream=True):
 
 ```bash
 # Quick question
-python chat.py "What is the capital of France?"
+python src/chat.py "What is the capital of France?"
 
 # Compare multiple models
-python chat.py "Write a haiku about code" -m gpt4.1 sonnet3.5 gemini-pro
+python src/chat.py "Write a haiku about code" -m gpt4.1 sonnet3.5 gemini-pro
 
 # Stream responses
-python chat.py "Tell me a story" --stream
+python src/chat.py "Tell me a story" --stream
 ```
 
 ## Core Features
@@ -57,7 +57,7 @@ python chat.py "Tell me a story" --stream
 The `Chat` class maintains conversation context and supports all major AI providers:
 
 ```python
-from chat import Chat
+from src.chat import Chat
 
 chat = Chat(
     model="sonnet3.5",  # Short names work: gpt4.1, o4-mini, gemini-pro, etc.
@@ -77,7 +77,7 @@ response2 = chat("What's the weather like there?")  # Knows we're talking about 
 Streamline AI interactions by transforming functions into prompts:
 
 ```python
-from chat import prompt
+from src.chat import prompt
 
 @prompt(model="gpt4.1", provider="openai")
 def greet_user(name):
@@ -128,16 +128,16 @@ for chunk in generate_story("a brave knight"):
 
 ```bash
 # Simple question with default model (gpt4.1)
-python chat.py "What is the capital of France?"
+python src/chat.py "What is the capital of France?"
 
 # Use a specific model
-python chat.py "Explain quantum computing" -m sonnet4
+python src/chat.py "Explain quantum computing" -m sonnet4
 
 # Use multiple models for comparison
-python chat.py "Write a haiku about code" -m gpt4.1 sonnet3.5 gemini-pro
+python src/chat.py "Write a haiku about code" -m gpt4.1 sonnet3.5 gemini-pro
 
 # Stream responses
-python chat.py "Tell me a story" --stream
+python src/chat.py "Tell me a story" --stream
 ```
 
 ### Options
@@ -153,13 +153,13 @@ python chat.py "Tell me a story" --stream
 
 ```bash
 # Custom system prompt
-python chat.py "Solve this problem" --system "You are a mathematics tutor"
+python src/chat.py "Solve this problem" --system "You are a mathematics tutor"
 
 # Adjust model parameters
-python chat.py "Be creative" --temperature 1.2 --max-tokens 500
+python src/chat.py "Be creative" --temperature 1.2 --max-tokens 500
 
 # Use reasoning effort for supported models
-python chat.py "Think step by step" -m o4-mini --reasoning-effort high
+python src/chat.py "Think step by step" -m o4-mini --reasoning-effort high
 ```
 
 ## Advanced Usage
@@ -207,16 +207,16 @@ Test models across different providers with the included test suite:
 
 ```bash
 # List all available models
-python test.py --list
+python src/test.py --list
 
 # Test all models
-python test.py --all
+python src/test.py --all
 
 # Test specific provider
-python test.py --provider anthropic
+python src/test.py --provider anthropic
 
 # Test specific models
-python test.py --model sonnet3.5 --model gpt4.1
+python src/test.py --model sonnet3.5 --model gpt4.1
 ```
 
 ### Test Options
@@ -226,15 +226,30 @@ python test.py --model sonnet3.5 --model gpt4.1
 -   `--model`: Test specific model(s) - can be used multiple times
 -   `--local`: Test local models with custom base URL
 -   `--decorators`: Also test @prompt decorators
+-   `--decorators-only`: Test only @prompt decorators (no regular chat tests)
 -   `--verbose, -v`: Enable detailed output
 -   `--base-url`: Custom base URL for local/custom API endpoints
+-   `--system`: Custom system prompt for testing
 
 ### Local Model Testing
 
 ```bash
 # Test local models through LM Studio
-python test.py --local --model llama-3.2-3b-instruct
-python test.py --local --base-url http://localhost:1234/v1 --model your-local-model
+python src/test.py --local --model hermes-3-llama-3.2-3b
+python src/test.py --local --base-url http://localhost:1234/v1 --model your-local-model
+```
+
+### Decorator Testing
+
+```bash
+# Test decorators alongside regular chat functionality
+python src/test.py --provider anthropic --decorators
+
+# Test only decorators for specific models
+python src/test.py --decorators-only --model sonnet3.5 --model gpt4.1
+
+# Test decorators for all models from a provider
+python src/test.py --decorators-only --provider openai
 ```
 
 ## Examples
@@ -243,7 +258,7 @@ python test.py --local --base-url http://localhost:1234/v1 --model your-local-mo
 
 ```bash
 # Compare responses across different providers
-python chat.py "Explain the concept of recursion" -m gpt4.1 sonnet3.5 gemini-pro
+python src/chat.py "Explain the concept of recursion" -m gpt4.1 sonnet3.5 gemini-pro
 ```
 
 Output format:
