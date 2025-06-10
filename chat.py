@@ -28,17 +28,18 @@ class AIProvider(ABC):
 
 
 class OpenAIProvider(AIProvider):
-    REASONING_MODELS = {"o3-mini"}
+    REASONING_MODELS = {"o4-mini", "o3"}
 
     def create_client(
         self,
         base_url: Optional[str],
         api_key: Optional[str],
     ) -> OpenAI:
-        # "None" means the client uses the OpenAI library but is not connecting to OpenAI's API.
         return OpenAI(
             base_url=base_url,
-            api_key=api_key or os.environ.get("OPENAI_API_KEY") or "None",
+            api_key=api_key
+            or os.environ.get("OPENAI_API_KEY")
+            or "None",  # "None" means the client uses the OpenAI library but is not connecting to OpenAI's API.
         )
 
     def create_completion(self, stream: bool, **kwargs: Any):
@@ -49,7 +50,8 @@ class OpenAIProvider(AIProvider):
             "stream": stream,
         }
 
-        if kwargs["model"] in self.REASONING_MODELS:
+        if any(model in kwargs["model"] for model in self.REASONING_MODELS):
+            completion_params["max_completion_tokens"] = kwargs.get("max_tokens", 4096)
             completion_params["reasoning_effort"] = kwargs.get(
                 "reasoning_effort", "high"
             )
@@ -107,7 +109,7 @@ class GoogleProvider(AIProvider):
         base_url: Optional[str],
         api_key: Optional[str],
     ) -> genai.Client:
-        return genai.Client(api_key=api_key or os.environ.get("GOOGLE_API_KEY"))
+        return genai.Client(api_key=api_key or os.environ.get("GEMINI_API_KEY"))
 
     def create_completion(self, stream: bool, **kwargs: Any):
         contents = []
@@ -149,23 +151,26 @@ class Chat:
         "openai": {
             "provider": OpenAIProvider,
             "models": {
-                "o3-mini": "o3-mini",
-                "4o": "gpt-4o",
-                "4o-mini": "gpt-4o-mini",
+                "o4-mini": "o4-mini-2025-04-16",
+                "o3": "o3-2025-04-16",
+                "4.1": "gpt-4.1-2025-04-14",
+                "4.1-mini": "gpt-4.1-mini-2025-04-14",
             },
         },
         "anthropic": {
             "provider": AnthropicProvider,
             "models": {
-                "sonnet": "claude-3-5-sonnet-20241022",
-                "haiku": "claude-3-5-haiku-20241022",
+                "opus4": "claude-opus-4-20250514",
+                "sonnet4": "claude-sonnet-4-20250514",
+                "sonnet3.7": "claude-3-7-sonnet-20250219",
+                "sonnet3.5": "claude-3-5-sonnet-20241022",
             },
         },
         "google": {
             "provider": GoogleProvider,
             "models": {
-                "gemini-pro": "gemini-2.0-pro-exp-02-05",
-                "gemini-flash": "gemini-2.0-flash-001",
+                "gemini-pro": "gemini-2.5-pro-preview-06-05",
+                "gemini-flash": "gemini-2.5-flash-preview-05-20",
             },
         },
     }
@@ -264,8 +269,8 @@ def prompt(
     model,
     provider=None,
     base_url=None,
-    max_tokens=4096,
-    temperature=0.8,
+    max_tokens=None,
+    temperature=None,
     reasoning_effort="high",
     api_key=None,
     stream=False,
@@ -335,7 +340,7 @@ if __name__ == "__main__":
             base_url=base_url,
             max_tokens=256,
             temperature=0.6,
-            reasoning_effort="medium",
+            reasoning_effort="low",
         )
         def simple_question():
             """You are a helpful AI assistant. Provide concise and accurate responses."""
@@ -348,7 +353,7 @@ if __name__ == "__main__":
             base_url=base_url,
             max_tokens=256,
             temperature=0.6,
-            reasoning_effort="medium",
+            reasoning_effort="low",
             stream=True,
         )
         def simple_question_stream():
@@ -366,53 +371,42 @@ if __name__ == "__main__":
 
     # Set up common configuration
     system_prompt = "Provide accurate and concise responses."
-    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
-    google_api_key = os.environ.get("GOOGLE_API_KEY")
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
     # Test OpenAI models
-    openai_models = ["o3-mini", "4o", "4o-mini"]
+    openai_models = ["o4-mini", "o3", "4.1", "4.1-mini"]
     for model in openai_models:
         chat = Chat(
             model,
             system=system_prompt,
             provider="openai",
-            api_key=openai_api_key,
+            api_key=OPENAI_API_KEY,
         )
         test_model(chat, f"OpenAI {model}")
 
     # Test Anthropic models
-    anthropic_models = ["haiku", "sonnet"]
+    anthropic_models = ["opus4", "sonnet4", "sonnet3.7", "sonnet3.5"]
     for model in anthropic_models:
         chat = Chat(
             model,
             system=system_prompt,
             provider="anthropic",
-            api_key=anthropic_api_key,
+            api_key=ANTHROPIC_API_KEY,
         )
         test_model(chat, f"Anthropic {model}")
 
     # Test Google models
-    google_models = ["gemini-flash", "gemini-pro"]
+    google_models = ["gemini-pro", "gemini-flash"]
     for model in google_models:
         chat = Chat(
             model,
             system=system_prompt,
             provider="google",
-            api_key=google_api_key,
+            api_key=GEMINI_API_KEY,
         )
         test_model(chat, f"Google {model}")
-
-    # Test local models (e.g., running on LM Studio)
-    local_models = ["hermes-3-llama-3.2-3b"]
-    for model in local_models:
-        chat = Chat(
-            model,
-            system=system_prompt,
-            provider="openai",  # LM Studio is compatible with openai provider
-            base_url="http://localhost:1234/v1",
-        )
-        test_model(chat, f"Local {model}")
 
     # Test the @prompt decorator with all model types
     print("\nTesting prompt decorator with different models:")
@@ -429,6 +423,19 @@ if __name__ == "__main__":
     for model in google_models:
         test_decorator(model, provider="google")
 
-    # Test local models (LM Studio) with decorator
-    for model in local_models:
-        test_decorator(model, provider="openai", base_url="http://localhost:1234/v1")
+    # Local testing with LM Studio
+
+    # # Test local models (e.g., running on LM Studio)
+    # local_models = ["hermes-3-llama-3.2-3b"]
+    # for model in local_models:
+    #     chat = Chat(
+    #         model,
+    #         system=system_prompt,
+    #         provider="openai",  # LM Studio is compatible with openai provider
+    #         base_url="http://localhost:1234/v1",
+    #     )
+    #     test_model(chat, f"Local {model}")
+
+    # # Test local models (LM Studio) with decorator
+    # for model in local_models:
+    #     test_decorator(model, provider="openai", base_url="http://localhost:1234/v1")
