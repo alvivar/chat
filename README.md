@@ -135,11 +135,11 @@ python chat.py "Think step by step" -m o4-mini --reasoning-effort high
 ### Command-Line Options
 
 -   `-m, --models`: Specify one or more models to use
--   `-s, --system`: Set the system prompt
+-   `-s, --system`: Set the system prompt (default: "Respond in clear, readable plain text without markdown formatting.")
 -   `--max-tokens`: Maximum tokens for response (default: 4096)
 -   `--temperature`: Controls randomness (default: 1)
 -   `--stream`: Enable streaming responses
--   `--reasoning-effort`: Set reasoning effort for reasoning models (low/medium/high)
+-   `--reasoning-effort`: Set reasoning effort for reasoning models (low/medium/high, default: high)
 
 ## Advanced Usage
 
@@ -209,13 +209,41 @@ python test.py --local --base-url http://localhost:1234/v1 --model your-local-mo
 ### Test Options
 
 -   `--all`: Test all available models
--   `--provider`: Test all models from a specific provider
--   `--model`: Test specific model(s)
+-   `--provider`: Test all models from a specific provider (openai, anthropic, google)
+-   `--model`: Test specific model(s) - can be used multiple times
 -   `--local`: Test local models with custom base URL
--   `--list`: List all available models
+-   `--list`: List all available models and their full names
 -   `--decorators`: Also test @prompt decorators
--   `--verbose`: Enable verbose output
--   `--system`: Custom system prompt for testing
+-   `--verbose, -v`: Enable verbose output with detailed test information
+-   `--system`: Custom system prompt for testing (default: "Provide accurate and concise responses.")
+-   `--base-url`: Custom base URL for local/custom API endpoints (default for local: http://localhost:1234/v1)
+
+### Test Examples
+
+```bash
+# Comprehensive testing
+python test.py --all --decorators --verbose
+
+# Test specific provider with decorators
+python test.py --provider anthropic --decorators -v
+
+# Test multiple specific models
+python test.py --model o4-mini --model sonnet4 --model gemini-pro
+
+# Test local models through LM Studio
+python test.py --local --model llama-3.2-3b-instruct --base-url http://localhost:1234/v1
+
+# List all available models and their mappings
+python test.py --list
+```
+
+The test suite automatically:
+
+-   Tests both normal and streaming responses for each model
+-   Tests the @prompt decorator functionality when `--decorators` is specified
+-   Handles rate limiting with 1-second delays between tests
+-   Provides detailed error reporting and success statistics
+-   Supports keyboard interruption (Ctrl+C) for graceful exit
 
 ## Getting Started
 
@@ -225,7 +253,7 @@ python test.py --local --base-url http://localhost:1234/v1 --model your-local-mo
     ```bash
     export OPENAI_API_KEY='your-key'
     export ANTHROPIC_API_KEY='your-key'
-    export GEMINI_API_KEY='your-key'
+    export GEMINI_API_KEY='your-key'  # Note: uses GEMINI_API_KEY, not GOOGLE_API_KEY
     ```
     Or pass keys directly when initializing `Chat`
 
@@ -238,6 +266,8 @@ python test.py --local --base-url http://localhost:1234/v1 --model your-local-mo
 -   **Context:** The `Chat` class maintains context across messages. The `@prompt` decorator does not maintain context between calls (yet).
 -   **Reasoning Effort:** Reasoning models (O4-mini, O3) support adjustable reasoning effort levels ("high", "medium", "low").
 -   **Model Resolution:** The library automatically resolves short model names (like "sonnet3.5") to full model identifiers (like "claude-3-5-sonnet-20241022").
+-   **Error Handling:** The library includes comprehensive error handling for unsupported models and missing API keys.
+-   **Rate Limiting:** Built-in rate limiting in test suite to respect API limits.
 
 ## Examples
 
@@ -248,6 +278,18 @@ Here are some practical examples of using the library:
 ```bash
 # Compare responses across different providers
 python chat.py "Explain the concept of recursion" -m gpt4.1 sonnet3.5 gemini-pro
+
+# Output format shows clear separation between models
+# 📨 Sending to 3 models: gpt4.1, sonnet3.5, gemini-pro
+# --------------------------------------------------------------------------------
+# 🤖 gpt4.1:
+# [response from GPT-4.1]
+# --------------------------------------------------------------------------------
+# 🤖 sonnet3.5:
+# [response from Claude Sonnet 3.5]
+# --------------------------------------------------------------------------------
+# 🤖 gemini-pro:
+# [response from Gemini Pro]
 ```
 
 ### Creative Writing with Streaming
