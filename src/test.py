@@ -56,12 +56,12 @@ def test_decorator(
 
         @prompt(**decorator_kwargs)
         def simple_question():
-            """You are a helpful AI assistant. Provide concise and accurate responses."""
+            """Provide concise and accurate responses."""
             return "What color is the sun?"
 
         @prompt(**decorator_kwargs, stream=True)
         def simple_question_stream():
-            """You are a helpful AI assistant. Provide concise and accurate responses."""
+            """Provide concise and accurate responses."""
             return "What color is the moon?"
 
         print(f"\n@prompt decorator - {model} normal response:")
@@ -293,15 +293,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python test.py --list                             # List all available models
-  python test.py --all                              # Test all models
-  python test.py --provider openai                  # Test all OpenAI models
-  python test.py --provider anthropic --decorators  # Test Anthropic models + decorators (requires API key)
-  python test.py --model sonnet3.5                  # Test specific model
-  python test.py --model o4-mini --model 4.1        # Test multiple specific models
-  python test.py --local --base-url http://localhost:1234/v1 --model hermes-3-llama-3.2-3b  # Test local models
-  python test.py --decorators-only --provider openai  # Test only decorators for OpenAI
-  python test.py --decorators-only --model sonnet3.5  # Test only decorators for specific model
+  python test.py --list                                 # List all available models
+  python test.py --all                                  # Test all models
+  python test.py --provider openai                      # Test all OpenAI models
+  python test.py --provider anthropic --decorators      # Test Anthropic models + decorators (requires API key)
+  python test.py --model sonnet3.5                      # Test specific model
+  python test.py --model o4-mini --model 4.1            # Test multiple specific models
+  python test.py --local --base-url http://localhost:1234/v1 --model hermes-3-llama-3.2-3b  # Test local models (requires local API)
+  python test.py --decorators-only --provider openai    # Test only decorators for OpenAI
+  python test.py --decorators-only --model sonnet3.5    # Test only decorators for specific model
         """,
     )
 
@@ -334,6 +334,10 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        return
 
     if args.list:
         print("Available models by provider:")
