@@ -1,7 +1,8 @@
-from src.chat import prompt
 import asyncio
 import concurrent.futures
 import os
+
+from src.chat import prompt
 
 
 cloud = {"stream": True}
