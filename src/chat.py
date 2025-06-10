@@ -113,14 +113,12 @@ class GoogleProvider(AIProvider):
 
     def create_completion(self, stream: bool, **kwargs: Any):
         contents = []
-        system_instruction = None
-
         for msg in kwargs["messages"]:
-            role, content = msg["role"], msg["content"]
-            if role == "system":
-                system_instruction = content
-            elif role in ("user", "assistant"):
-                contents.append(content)
+            role = "model" if msg["role"] == "assistant" else msg["role"]
+            if msg.get("content"):
+                contents.append({"role": role, "parts": [{"text": msg["content"]}]})
+
+        system_instruction = kwargs.get("system")
 
         completion_params = {
             "model": kwargs["model"],
