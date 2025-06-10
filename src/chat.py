@@ -114,21 +114,31 @@ class GoogleProvider(AIProvider):
     def create_completion(self, stream: bool, **kwargs: Any):
         contents = []
         for msg in kwargs["messages"]:
-            role = "model" if msg["role"] == "assistant" else msg["role"]
             if msg.get("content"):
-                contents.append({"role": role, "parts": [{"text": msg["content"]}]})
+                contents.append(msg["content"])
 
+        config = None
         system_instruction = kwargs.get("system")
+        if (
+            system_instruction
+            or kwargs.get("temperature") is not None
+            or kwargs.get("max_tokens")
+        ):
+            config_params = {}
+            if system_instruction:
+                config_params["system_instruction"] = system_instruction
+            if kwargs.get("temperature") is not None:
+                config_params["temperature"] = kwargs["temperature"]
+            if kwargs.get("max_tokens"):
+                config_params["max_output_tokens"] = kwargs["max_tokens"]
+            config = GenerateContentConfig(**config_params)
 
         completion_params = {
             "model": kwargs["model"],
             "contents": contents,
-            "config": GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=kwargs["temperature"],
-                max_output_tokens=kwargs["max_tokens"],
-            ),
         }
+        if config:
+            completion_params["config"] = config
 
         models = kwargs["client"].models
         return (
@@ -274,28 +284,24 @@ def prompt(
     stream=False,
 ):
     def decorator(func):
-        system_prompt = func.__doc__.strip() if func.__doc__ else None
-
-        chat = Chat(
-            model=model,
-            system=system_prompt,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            reasoning_effort=reasoning_effort,
-            provider=provider,
-            base_url=base_url,
-            api_key=api_key,
-        )
+        system_prompt = func.__doc__.strip() if func.__doc__ else ""
+        chat_instance = None
 
         def wrapper(*args, **kwargs):
-            try:
-                func_return = func(*args, **kwargs)
-                return chat(func_return, stream=stream)
-            except Exception as e:
-                print(
-                    f"Something went wrong in the prompt decorator: {str(e)}. "
-                    "Let's try to fix this and give it another go!"
+            nonlocal chat_instance
+            if chat_instance is None:
+                chat_instance = Chat(
+                    model=model,
+                    system=system_prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    reasoning_effort=reasoning_effort,
+                    provider=provider,
+                    base_url=base_url,
+                    api_key=api_key,
                 )
+
+            return chat_instance(func(*args, **kwargs), stream=stream)
 
         return wrapper
 
