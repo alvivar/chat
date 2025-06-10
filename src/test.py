@@ -16,19 +16,11 @@ def test_model(chat: Chat, model_name: str, verbose: bool = False) -> bool:
         print(f"\nTesting {model_name}:")
 
     try:
-        if verbose:
-            print("→ Normal response test:")
-        else:
-            print("Normal response:")
-
+        print("→ Normal response test:" if verbose else "Normal response:")
         response = chat("What color is the sky?")
         print(response)
 
-        if verbose:
-            print("\n→ Streaming response test:")
-        else:
-            print("\nStreaming response:")
-
+        print("\n→ Streaming response test:" if verbose else "\nStreaming response:")
         for chunk in chat("What color is grass?", stream=True):
             print(chunk, end="", flush=True)
         print("\n")
@@ -241,6 +233,60 @@ def print_summary(total_passed: int, total_tests: int) -> None:
         print("- Some models may have usage limits or require special access")
 
 
+def run_decorator_tests(
+    provider: Optional[str],
+    models: Optional[List[str]],
+    api_keys: Dict[str, str],
+    verbose: bool,
+    local: bool = False,
+    base_url: Optional[str] = None,
+) -> Tuple[int, int]:
+    total_passed = 0
+    total_tests = 0
+
+    if provider:
+        provider_models = get_models_by_provider(provider)
+        api_key_name = f"{provider.upper()}_API_KEY"
+        api_key = api_keys.get(api_key_name)
+        if not api_key:
+            print(
+                f"⚠️  Warning: No API key found for {provider}. Set {api_key_name} environment variable."
+            )
+
+        for model in provider_models:
+            try:
+                if test_decorator(model, provider=provider, verbose=verbose):
+                    total_passed += 1
+                total_tests += 1
+                time.sleep(1)
+            except Exception as e:
+                print(f"❌ Failed to test decorator for {provider} {model}: {str(e)}")
+                total_tests += 1
+
+    elif models:
+        for model in models:
+            try:
+                if local:
+                    success = test_decorator(
+                        model,
+                        provider="openai",
+                        base_url=base_url,
+                        verbose=verbose,
+                    )
+                else:
+                    success = test_decorator(model, verbose=verbose)
+
+                if success:
+                    total_passed += 1
+                total_tests += 1
+                time.sleep(1)
+            except Exception as e:
+                print(f"❌ Failed to test decorator for {model}: {str(e)}")
+                total_tests += 1
+
+    return total_passed, total_tests
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Test AI chat models across different providers",
@@ -254,6 +300,8 @@ Examples:
   python test.py --model sonnet3.5                  # Test specific model
   python test.py --model o4-mini --model 4.1        # Test multiple specific models
   python test.py --local --base-url http://localhost:1234/v1 --model hermes-3-llama-3.2-3b  # Test local models
+  python test.py --decorators-only --provider openai  # Test only decorators for OpenAI
+  python test.py --decorators-only --model sonnet3.5  # Test only decorators for specific model
         """,
     )
 
@@ -273,6 +321,11 @@ Examples:
     parser.add_argument(
         "--decorators", action="store_true", help="Also test @prompt decorators"
     )
+    parser.add_argument(
+        "--decorators-only",
+        action="store_true",
+        help="Test only @prompt decorators (no regular chat tests)",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument(
         "--system",
@@ -290,8 +343,10 @@ Examples:
                 print(f"  {short_name:<15} -> {full_name}")
         return
 
-    if not any([args.all, args.provider, args.model, args.local]):
-        parser.error("Must specify one of: --all, --provider, --model, or --local")
+    if not any([args.all, args.provider, args.model, args.local, args.decorators_only]):
+        parser.error(
+            "Must specify one of: --all, --provider, --model, --local, or --decorators-only"
+        )
 
     if args.local and not args.model:
         parser.error("--local requires --model to specify which local models to test")
@@ -299,39 +354,52 @@ Examples:
     if args.local and not args.base_url:
         args.base_url = "http://localhost:1234/v1"
 
+    if args.decorators_only and not any([args.provider, args.model]):
+        parser.error(
+            "--decorators-only requires --provider or --model to specify which models to test"
+        )
+
     api_keys = get_api_keys()
 
     print("🚀 Starting AI model tests...")
     if args.verbose:
         print(f"System prompt: {args.system}")
-        print(f"Test decorators: {args.decorators}")
+        print(f"Test decorators: {args.decorators or args.decorators_only}")
+        if args.decorators_only:
+            print("Mode: Decorators only")
 
     total_passed = 0
     total_tests = 0
 
     try:
-        if args.all:
+        if args.decorators_only:
+            total_passed, total_tests = run_decorator_tests(
+                args.provider,
+                args.model,
+                api_keys,
+                args.verbose,
+                args.local,
+                args.base_url,
+            )
+        elif args.all:
             for provider in ["openai", "anthropic", "google"]:
                 passed, total = test_provider_models(
                     provider, args.system, api_keys, args.decorators, args.verbose
                 )
                 total_passed += passed
                 total_tests += total
-
         elif args.provider:
             passed, total = test_provider_models(
                 args.provider, args.system, api_keys, args.decorators, args.verbose
             )
             total_passed += passed
             total_tests += total
-
         elif args.local:
             passed, total = test_local_models(
                 args.base_url, args.model, args.system, args.decorators, args.verbose
             )
             total_passed += passed
             total_tests += total
-
         elif args.model:
             passed, total = test_specific_models(
                 args.model,
