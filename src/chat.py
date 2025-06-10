@@ -153,8 +153,8 @@ class Chat:
             "models": {
                 "o4-mini": "o4-mini-2025-04-16",
                 "o3": "o3-2025-04-16",
-                "4.1": "gpt-4.1-2025-04-14",
-                "4.1-mini": "gpt-4.1-mini-2025-04-14",
+                "gpt4.1": "gpt-4.1-2025-04-14",
+                "gpt4.1-mini": "gpt-4.1-mini-2025-04-14",
             },
         },
         "anthropic": {
@@ -305,21 +305,37 @@ def prompt(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Chat with AI models")
-    parser.add_argument("message", help="Message to send to the model(s)")
+    parser = argparse.ArgumentParser(
+        description="AI Chat",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s "Hello, how are you?"
+  %(prog)s "Explain quantum computing" -m gpt4.1 sonnet4
+  %(prog)s "Write a poem" --system "You are a creative poet" --stream
+  %(prog)s "Solve this math problem" --temperature 0.2 --max-tokens 1000
+        """.strip(),
+    )
+
+    parser.add_argument("message", nargs="?", help="Message to send to the model(s)")
     parser.add_argument(
         "-m",
         "--models",
         nargs="+",
-        default=["sonnet3.5"],
-        help="Model(s) to use (default: sonnet3.5). Can specify multiple models.",
+        default=["gpt4.1"],
+        help="Model(s) to use (default: gpt4.1). Can specify multiple models.",
     )
-    parser.add_argument("-s", "--system", default="", help="System prompt")
+    parser.add_argument(
+        "-s",
+        "--system",
+        default="Respond in clear, readable plain text without markdown formatting.",
+        help="System prompt",
+    )
     parser.add_argument(
         "--max-tokens", type=int, default=4096, help="Maximum tokens (default: 4096)"
     )
     parser.add_argument(
-        "--temperature", type=float, default=0.8, help="Temperature (default: 0.8)"
+        "--temperature", type=float, default=1, help="Temperature (default: 1)"
     )
     parser.add_argument("--stream", action="store_true", help="Stream responses")
     parser.add_argument(
@@ -331,62 +347,58 @@ def main():
 
     args = parser.parse_args()
 
-    # Handle multiple models
+    if not args.message:
+        parser.print_help()
+        return
+
+    all_supported_models = {
+        model
+        for provider_info in Chat.PROVIDER_MAP.values()
+        for model in provider_info["models"]
+    }
+
+    unsupported_models = [
+        model for model in args.models if model not in all_supported_models
+    ]
+
+    if unsupported_models:
+        print(f"❌ Unsupported model(s): {', '.join(unsupported_models)}")
+        print(f"Supported models: {', '.join(sorted(all_supported_models))}")
+        return
+
+    def create_chat(model):
+        return Chat(
+            model=model,
+            system=args.system,
+            max_tokens=args.max_tokens,
+            temperature=args.temperature,
+            reasoning_effort=args.reasoning_effort,
+        )
+
+    def process_response(chat, model):
+        print(f"🤖 {model}:\n")
+        if args.stream:
+            for chunk in chat(args.message, stream=True):
+                print(chunk, end="", flush=True)
+            print()
+        else:
+            response = chat(args.message)
+            print(response)
+
     if len(args.models) == 1:
-        # Single model
-        try:
-            chat = Chat(
-                model=args.models[0],
-                system=args.system,
-                max_tokens=args.max_tokens,
-                temperature=args.temperature,
-                reasoning_effort=args.reasoning_effort,
-            )
-
-            print(f"🤖 {args.models[0]}:")
-            if args.stream:
-                for chunk in chat(args.message, stream=True):
-                    print(chunk, end="", flush=True)
-                print()  # New line after streaming
-            else:
-                response = chat(args.message)
-                print(response)
-
-        except Exception as e:
-            print(f"❌ Error with {args.models[0]}: {e}")
-
+        chat = create_chat(args.models[0])
+        process_response(chat, args.models[0])
     else:
-        # Multiple models
         print(f"📨 Sending to {len(args.models)} models: {', '.join(args.models)}")
-        print("=" * 60)
 
         for i, model in enumerate(args.models):
-            try:
-                chat = Chat(
-                    model=model,
-                    system=args.system,
-                    max_tokens=args.max_tokens,
-                    temperature=args.temperature,
-                    reasoning_effort=args.reasoning_effort,
-                )
+            if i > 0:
+                print("\n" + "-" * 80)
+            else:
+                print("-" * 80)
 
-                print(f"\n🤖 {model}:")
-                print("-" * 40)
-
-                if args.stream:
-                    for chunk in chat(args.message, stream=True):
-                        print(chunk, end="", flush=True)
-                    print()  # New line after streaming
-                else:
-                    response = chat(args.message)
-                    print(response)
-
-                # Add separator between models (except for the last one)
-                if i < len(args.models) - 1:
-                    print("\n" + "=" * 60)
-
-            except Exception as e:
-                print(f"❌ Error with {model}: {e}")
+            chat = create_chat(model)
+            process_response(chat, model)
 
 
 if __name__ == "__main__":
