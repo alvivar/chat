@@ -2,11 +2,11 @@ import argparse
 import os
 import sys
 import time
+from typing import Dict, List, Tuple, Optional
 from chat import Chat, prompt
 
 
-def test_model(chat, model_name, verbose=False):
-    """Test a single model with both normal and streaming responses."""
+def test_model(chat: Chat, model_name: str, verbose: bool = False) -> bool:
     if verbose:
         print(f"\n{'=' * 50}")
         print(f"Testing {model_name}")
@@ -15,7 +15,6 @@ def test_model(chat, model_name, verbose=False):
         print(f"\nTesting {model_name}:")
 
     try:
-        # Test regular non-streaming response
         if verbose:
             print("→ Normal response test:")
         else:
@@ -24,7 +23,6 @@ def test_model(chat, model_name, verbose=False):
         response = chat("What color is the sky?")
         print(response)
 
-        # Test streaming response
         if verbose:
             print("\n→ Streaming response test:")
         else:
@@ -44,40 +42,35 @@ def test_model(chat, model_name, verbose=False):
         return False
 
 
-def test_decorator(model, provider=None, base_url=None, verbose=False):
-    """Test the @prompt decorator functionality."""
+def test_decorator(
+    model: str,
+    provider: Optional[str] = None,
+    base_url: Optional[str] = None,
+    verbose: bool = False,
+) -> bool:
     if verbose:
         print(f"\n→ Testing @prompt decorator for {model}")
 
     try:
-        # Test regular non-streaming prompt
-        @prompt(
-            model=model,
-            provider=provider,
-            base_url=base_url,
-            max_tokens=256,
-            temperature=0.6,
-            reasoning_effort="low",
-        )
+        decorator_kwargs = {
+            "model": model,
+            "provider": provider,
+            "base_url": base_url,
+            "max_tokens": 256,
+            "temperature": 0.6,
+            "reasoning_effort": "low",
+        }
+
+        @prompt(**decorator_kwargs)
         def simple_question():
             """You are a helpful AI assistant. Provide concise and accurate responses."""
             return "What color is the sun?"
 
-        # Test streaming prompt
-        @prompt(
-            model=model,
-            provider=provider,
-            base_url=base_url,
-            max_tokens=256,
-            temperature=0.6,
-            reasoning_effort="low",
-            stream=True,
-        )
+        @prompt(**decorator_kwargs, stream=True)
         def simple_question_stream():
             """You are a helpful AI assistant. Provide concise and accurate responses."""
             return "What color is the moon?"
 
-        # Execute and print results
         print(f"\n@prompt decorator - {model} normal response:")
         print(simple_question())
 
@@ -93,39 +86,53 @@ def test_decorator(model, provider=None, base_url=None, verbose=False):
         return False
 
 
-def get_models_by_provider(provider_name):
-    """Get all models for a specific provider."""
-    if provider_name not in Chat.PROVIDER_MAP:
-        return []
-    return list(Chat.PROVIDER_MAP[provider_name]["models"].keys())
+def get_models_by_provider(provider_name: str) -> List[str]:
+    return list(Chat.PROVIDER_MAP.get(provider_name, {}).get("models", {}).keys())
+
+
+def create_chat_instance(
+    model: str,
+    system_prompt: str,
+    provider: Optional[str] = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> Chat:
+    kwargs = {"model": model, "system": system_prompt}
+    if provider:
+        kwargs["provider"] = provider
+    if base_url:
+        kwargs["base_url"] = base_url
+    if api_key:
+        kwargs["api_key"] = api_key
+    return Chat(**kwargs)
 
 
 def test_provider_models(
-    provider_name, system_prompt, api_keys, test_decorators=False, verbose=False
-):
-    """Test all models for a specific provider."""
+    provider_name: str,
+    system_prompt: str,
+    api_keys: Dict[str, str],
+    test_decorators: bool = False,
+    verbose: bool = False,
+) -> Tuple[int, int]:
     models = get_models_by_provider(provider_name)
     if not models:
         print(f"❌ Unknown provider: {provider_name}")
         return 0, 0
 
-    api_key = api_keys.get(provider_name.upper() + "_API_KEY")
+    api_key_name = f"{provider_name.upper()}_API_KEY"
+    api_key = api_keys.get(api_key_name)
     if not api_key:
         print(
-            f"⚠️  Warning: No API key found for {provider_name}. Set {provider_name.upper()}_API_KEY environment variable."
+            f"⚠️  Warning: No API key found for {provider_name}. Set {api_key_name} environment variable."
         )
 
     passed = 0
-    total = 0
+    total = len(models)
 
     for model in models:
-        total += 1
         try:
-            chat = Chat(
-                model,
-                system=system_prompt,
-                provider=provider_name,
-                api_key=api_key,
+            chat = create_chat_instance(
+                model, system_prompt, provider_name, api_key=api_key
             )
 
             if test_model(chat, f"{provider_name.title()} {model}", verbose):
@@ -137,26 +144,24 @@ def test_provider_models(
         except Exception as e:
             print(f"❌ Failed to initialize {provider_name} {model}: {str(e)}")
 
-        time.sleep(1)  # Rate limiting
+        time.sleep(1)
 
     return passed, total
 
 
 def test_local_models(
-    base_url, models, system_prompt, test_decorators=False, verbose=False
-):
-    """Test local models (e.g., LM Studio)."""
+    base_url: str,
+    models: List[str],
+    system_prompt: str,
+    test_decorators: bool = False,
+    verbose: bool = False,
+) -> Tuple[int, int]:
     passed = 0
     total = len(models)
 
     for model in models:
         try:
-            chat = Chat(
-                model,
-                system=system_prompt,
-                provider="openai",  # LM Studio is compatible with OpenAI API
-                base_url=base_url,
-            )
+            chat = create_chat_instance(model, system_prompt, "openai", base_url)
 
             if test_model(chat, f"Local {model}", verbose):
                 passed += 1
@@ -172,6 +177,67 @@ def test_local_models(
         time.sleep(1)
 
     return passed, total
+
+
+def test_specific_models(
+    models: List[str],
+    system_prompt: str,
+    is_local: bool = False,
+    base_url: Optional[str] = None,
+    test_decorators: bool = False,
+    verbose: bool = False,
+) -> Tuple[int, int]:
+    passed = 0
+    total = len(models)
+
+    for model in models:
+        try:
+            if is_local:
+                chat = create_chat_instance(model, system_prompt, "openai", base_url)
+                model_name = f"Local {model}"
+            else:
+                chat = create_chat_instance(model, system_prompt)
+                model_name = model
+
+            if test_model(chat, model_name, verbose):
+                passed += 1
+
+            if test_decorators:
+                if is_local:
+                    test_decorator(
+                        model, provider="openai", base_url=base_url, verbose=verbose
+                    )
+                else:
+                    test_decorator(model, verbose=verbose)
+
+        except Exception as e:
+            print(f"❌ Failed to test model {model}: {str(e)}")
+
+        time.sleep(1)
+
+    return passed, total
+
+
+def get_api_keys() -> Dict[str, str]:
+    return {
+        "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
+        "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),
+        "GOOGLE_API_KEY": os.environ.get("GEMINI_API_KEY"),
+    }
+
+
+def print_summary(total_passed: int, total_tests: int) -> None:
+    print(f"\n{'=' * 50}")
+    print(f"📊 Test Summary: {total_passed}/{total_tests} models passed")
+    if total_tests > 0:
+        success_rate = (total_passed / total_tests) * 100
+        print(f"Success rate: {success_rate:.1f}%")
+
+    if total_passed < total_tests:
+        print("\n💡 Tips:")
+        print("- Make sure API keys are set as environment variables")
+        print("- Check your internet connection")
+        print("- Some models may have usage limits or require special access")
 
 
 def main():
@@ -190,7 +256,6 @@ Examples:
         """,
     )
 
-    # Main options
     parser.add_argument("--all", action="store_true", help="Test all available models")
     parser.add_argument(
         "--provider",
@@ -203,7 +268,6 @@ Examples:
         "--list", action="store_true", help="List all available models and exit"
     )
 
-    # Configuration options
     parser.add_argument("--base-url", help="Base URL for local/custom API endpoints")
     parser.add_argument(
         "--decorators", action="store_true", help="Also test @prompt decorators"
@@ -217,7 +281,6 @@ Examples:
 
     args = parser.parse_args()
 
-    # Handle --list option
     if args.list:
         print("Available models by provider:")
         for provider, info in Chat.PROVIDER_MAP.items():
@@ -226,7 +289,6 @@ Examples:
                 print(f"  {short_name:<15} -> {full_name}")
         return
 
-    # Validate arguments
     if not any([args.all, args.provider, args.model, args.local]):
         parser.error("Must specify one of: --all, --provider, --model, or --local")
 
@@ -234,14 +296,9 @@ Examples:
         parser.error("--local requires --model to specify which local models to test")
 
     if args.local and not args.base_url:
-        args.base_url = "http://localhost:1234/v1"  # Default LM Studio URL
+        args.base_url = "http://localhost:1234/v1"
 
-    # Get API keys
-    api_keys = {
-        "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY"),
-        "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY"),
-        "GOOGLE_API_KEY": os.environ.get("GEMINI_API_KEY"),
-    }
+    api_keys = get_api_keys()
 
     print("🚀 Starting AI model tests...")
     if args.verbose:
@@ -253,7 +310,6 @@ Examples:
 
     try:
         if args.all:
-            # Test all providers
             for provider in ["openai", "anthropic", "google"]:
                 passed, total = test_provider_models(
                     provider, args.system, api_keys, args.decorators, args.verbose
@@ -262,7 +318,6 @@ Examples:
                 total_tests += total
 
         elif args.provider:
-            # Test specific provider
             passed, total = test_provider_models(
                 args.provider, args.system, api_keys, args.decorators, args.verbose
             )
@@ -270,7 +325,6 @@ Examples:
             total_tests += total
 
         elif args.local:
-            # Test local models
             passed, total = test_local_models(
                 args.base_url, args.model, args.system, args.decorators, args.verbose
             )
@@ -278,58 +332,22 @@ Examples:
             total_tests += total
 
         elif args.model:
-            # Test specific models
-            for model in args.model:
-                total_tests += 1
-                try:
-                    # Determine provider automatically or use local
-                    if args.local:
-                        chat = Chat(
-                            model,
-                            system=args.system,
-                            provider="openai",
-                            base_url=args.base_url,
-                        )
-                        model_name = f"Local {model}"
-                    else:
-                        chat = Chat(model, system=args.system)
-                        model_name = model
-
-                    if test_model(chat, model_name, args.verbose):
-                        total_passed += 1
-
-                    if args.decorators:
-                        if args.local:
-                            test_decorator(
-                                model,
-                                provider="openai",
-                                base_url=args.base_url,
-                                verbose=args.verbose,
-                            )
-                        else:
-                            test_decorator(model, verbose=args.verbose)
-
-                except Exception as e:
-                    print(f"❌ Failed to test model {model}: {str(e)}")
-
-                time.sleep(1)
+            passed, total = test_specific_models(
+                args.model,
+                args.system,
+                args.local,
+                args.base_url,
+                args.decorators,
+                args.verbose,
+            )
+            total_passed += passed
+            total_tests += total
 
     except KeyboardInterrupt:
         print("\n\n⚠️  Tests interrupted by user")
         sys.exit(1)
 
-    # Summary
-    print(f"\n{'=' * 50}")
-    print(f"📊 Test Summary: {total_passed}/{total_tests} models passed")
-    if total_tests > 0:
-        success_rate = (total_passed / total_tests) * 100
-        print(f"Success rate: {success_rate:.1f}%")
-
-    if total_passed < total_tests:
-        print("\n💡 Tips:")
-        print("- Make sure API keys are set as environment variables")
-        print("- Check your internet connection")
-        print("- Some models may have usage limits or require special access")
+    print_summary(total_passed, total_tests)
 
 
 if __name__ == "__main__":
