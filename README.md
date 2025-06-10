@@ -149,7 +149,7 @@ print(response)  # Assistant describes Eiffel Tower, Louvre, etc.
     ```bash
     export OPENAI_API_KEY='your-key'
     export ANTHROPIC_API_KEY='your-key'
-    export GOOGLE_API_KEY='your-key'
+    export GEMINI_API_KEY='your-key'
     ```
     Or pass keys directly when initializing `Chat`
 
