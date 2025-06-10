@@ -2,7 +2,8 @@ import argparse
 import os
 import sys
 import time
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
 from chat import Chat, prompt
 
 
