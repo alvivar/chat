@@ -1,4 +1,4 @@
-from chat import prompt
+from src.chat import prompt
 import asyncio
 import concurrent.futures
 import os
