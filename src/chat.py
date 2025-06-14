@@ -9,6 +9,21 @@ from google.genai.types import GenerateContentConfig
 from openai import OpenAI
 
 
+DEFAULT_SYSTEM_PROMPT = """
+You are a helpful, concise AI assistant.
+Be engaging and creative.
+Think critically and offer unique perspectives.
+Don't use Markdown, you are writing in a text-based interface.
+"""
+
+DEFAULT_MODEL = ["gpt4.1"]
+DEFAULT_MAX_TOKENS = 4096
+DEFAULT_TEMPERATURE = 0.7
+
+REASONING_MODELS = {"o3", "o4-mini"}
+DEFAULT_REASONING_EFFORT = "high"
+
+
 class AIProvider(ABC):
     @abstractmethod
     def create_client(self, base_url: Optional[str], api_key: Optional[str]):
@@ -28,8 +43,6 @@ class AIProvider(ABC):
 
 
 class OpenAIProvider(AIProvider):
-    REASONING_MODELS = {"o4-mini", "o3"}
-
     def create_client(
         self,
         base_url: Optional[str],
@@ -187,12 +200,12 @@ class Chat:
         self,
         model: str,
         system: str = "",
-        max_tokens: int = 4096,
-        temperature: float = 0.8,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
         provider: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        reasoning_effort: str = "high",
+        reasoning_effort: str = DEFAULT_REASONING_EFFORT,
     ):
         self.provider = self._get_provider(model, provider)
         self.client = self.provider.create_client(base_url, api_key)
@@ -279,7 +292,7 @@ def prompt(
     base_url=None,
     max_tokens=None,
     temperature=None,
-    reasoning_effort="high",
+    reasoning_effort=DEFAULT_REASONING_EFFORT,
     api_key=None,
     stream=False,
 ):
@@ -316,8 +329,8 @@ def main():
 Examples:
   %(prog)s "Hello, how are you?"
   %(prog)s "Explain quantum computing" -m gpt4.1 sonnet4
-  %(prog)s "Write a poem" --system "You are a creative poet" --stream
-  %(prog)s "Solve this math problem" --temperature 0.2 --max-tokens 1000
+  %(prog)s "Write a poem" --system "You are a creative poet"
+  %(prog)s "Solve this math problem" --temperature 0.2 --max-tokens 1000 --no-stream
         """.strip(),
     )
 
@@ -326,27 +339,35 @@ Examples:
         "-m",
         "--models",
         nargs="+",
-        default=["gpt4.1"],
+        default=DEFAULT_MODEL,
         help="Model(s) to use (default: gpt4.1). Can specify multiple models.",
     )
     parser.add_argument(
         "-s",
         "--system",
-        default="Respond in clear, readable plain text without markdown formatting.",
+        default=DEFAULT_SYSTEM_PROMPT.strip(),
         help="System prompt",
     )
     parser.add_argument(
-        "--max-tokens", type=int, default=4096, help="Maximum tokens (default: 4096)"
+        "--max-tokens",
+        type=int,
+        default=DEFAULT_MAX_TOKENS,
+        help=f"Maximum tokens (default: {DEFAULT_MAX_TOKENS})",
     )
     parser.add_argument(
-        "--temperature", type=float, default=1, help="Temperature (default: 1)"
+        "--temperature",
+        type=float,
+        default=DEFAULT_TEMPERATURE,
+        help=f"Temperature (default: {DEFAULT_TEMPERATURE})",
     )
-    parser.add_argument("--stream", action="store_true", help="Stream responses")
+    parser.add_argument(
+        "--no-stream", action="store_true", help="Disable streaming responses"
+    )
     parser.add_argument(
         "--reasoning-effort",
-        default="high",
+        default=DEFAULT_REASONING_EFFORT,
         choices=["low", "medium", "high"],
-        help="Reasoning effort for reasoning models (default: high)",
+        help=f"Reasoning effort for reasoning models (default: {DEFAULT_REASONING_EFFORT})",
     )
 
     args = parser.parse_args()
@@ -381,7 +402,7 @@ Examples:
 
     def process_response(chat, model):
         print(f"🤖 {model}:\n")
-        if args.stream:
+        if not args.no_stream:
             for chunk in chat(args.message, stream=True):
                 print(chunk, end="", flush=True)
             print()
