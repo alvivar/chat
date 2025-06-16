@@ -63,10 +63,10 @@ class OpenAIProvider(AIProvider):
             "stream": stream,
         }
 
-        if any(model in kwargs["model"] for model in self.REASONING_MODELS):
+        if any(model in kwargs["model"] for model in REASONING_MODELS):
             completion_params["max_completion_tokens"] = kwargs.get("max_tokens", 4096)
             completion_params["reasoning_effort"] = kwargs.get(
-                "reasoning_effort", "high"
+                "reasoning_effort", DEFAULT_REASONING_EFFORT
             )
         else:
             completion_params.update(
@@ -290,8 +290,8 @@ def prompt(
     model,
     provider=None,
     base_url=None,
-    max_tokens=None,
-    temperature=None,
+    max_tokens=DEFAULT_MAX_TOKENS,
+    temperature=DEFAULT_TEMPERATURE,
     reasoning_effort=DEFAULT_REASONING_EFFORT,
     api_key=None,
     stream=False,
