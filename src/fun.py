@@ -2,7 +2,7 @@ import asyncio
 import concurrent.futures
 import os
 
-from src.chat import prompt
+from chat import prompt
 
 
 cloud = {"stream": True}
@@ -16,7 +16,7 @@ local = {
 
 
 # Lower temperature for consistent world-building
-@prompt(**cloud, model="o3-mini", temperature=0.6)
+@prompt(**cloud, model="sonnet4", temperature=0.6)
 def define_system_rules():
     """Define the core rules and mechanics of a fictional system or world."""
     return """Create 3-5 fundamental rules that govern this fictional world/system. The rules should be:
@@ -27,7 +27,7 @@ def define_system_rules():
 
 
 # Balanced temperature for creative but grounded characters
-@prompt(**cloud, model="o3-mini", temperature=0.7)
+@prompt(**cloud, model="sonnet4", temperature=0.7)
 def create_character_profiles(rules):
     """Generate character profiles that exist within the defined system."""
     return f"""Based on these system rules:
@@ -41,7 +41,7 @@ Create 2-3 detailed character profiles including:
 
 
 # Moderate temperature for well-defined abilities
-@prompt(**cloud, model="o3-mini", temperature=0.65)
+@prompt(**cloud, model="sonnet4", temperature=0.65)
 def define_character_abilities(rules):
     """Define possible actions and abilities for characters within the system."""
     return f"""Given these system rules:
@@ -55,7 +55,7 @@ Define 4-6 possible abilities/actions that:
 
 
 # Higher temperature for dynamic interactions
-@prompt(**cloud, model="o3-mini", temperature=0.8)
+@prompt(**cloud, model="sonnet4", temperature=0.8)
 def create_character_interactions(characters, abilities):
     """Create scenarios showing character interactions using their abilities."""
     return f"""Using these characters:
@@ -87,13 +87,13 @@ Guidelines for a masterful translation:
 
 
 # Higher temperature for creative, literary translations
-@prompt(**cloud, model="sonnet", temperature=0.7)
+@prompt(**cloud, model="sonnet3.5", temperature=0.7)
 def sonnet(lang, text):
     """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
     return _get_translation_prompt(lang, text)
 
 
-@prompt(**cloud, model="4o", temperature=0.7)
+@prompt(**cloud, model="gpt4.1", temperature=0.7)
 def gpt4o(lang, text):
     """Transform the given text into elegant, literary prose in the target language while preserving the essence and artistry of the original."""
     return _get_translation_prompt(lang, text)
