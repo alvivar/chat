@@ -190,8 +190,8 @@ class Chat:
         "google": {
             "provider": GoogleProvider,
             "models": {
-                "gemini-pro": "gemini-2.5-pro-preview-06-05",
-                "gemini-flash": "gemini-2.5-flash-preview-05-20",
+                "gemini-pro": "gemini-2.5-pro",
+                "gemini-flash": "gemini-2.5-flash",
             },
         },
     }
