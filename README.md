@@ -119,8 +119,8 @@ for chunk in generate_story("a brave knight"):
 
 ### Google
 
--   `"gemini-pro"` (gemini-2.5-pro-preview-06-05)
--   `"gemini-flash"` (gemini-2.5-flash-preview-05-20)
+-   `"gemini-pro"` (gemini-2.5-pro)
+-   `"gemini-flash"` (gemini-2.5-flash)
 
 ## Command-Line Interface
 
@@ -145,7 +145,7 @@ python src/chat.py "Tell me a story" --stream
 -   `-m, --models`: Specify one or more models to use
 -   `-s, --system`: Set the system prompt
 -   `--max-tokens`: Maximum tokens for response (default: 4096)
--   `--temperature`: Controls randomness (default: 1)
+-   `--temperature`: Controls randomness (default: 0.7)
 -   `--stream`: Enable streaming responses
 -   `--reasoning-effort`: Set reasoning effort for reasoning models (low/medium/high)
 
