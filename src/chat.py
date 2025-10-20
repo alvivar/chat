@@ -181,10 +181,9 @@ class Chat:
         "anthropic": {
             "provider": AnthropicProvider,
             "models": {
-                "opus4": "claude-opus-4-20250514",
-                "sonnet4": "claude-sonnet-4-20250514",
-                "sonnet3.7": "claude-3-7-sonnet-20250219",
-                "sonnet3.5": "claude-3-5-sonnet-20241022",
+                "sonnet4.5": "claude-sonnet-4-5",
+                "haiku4.5": "claude-haiku-4-5",
+                "opus4.1": "claude-opus-4-1",
             },
         },
         "google": {
