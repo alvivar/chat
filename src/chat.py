@@ -128,7 +128,8 @@ class GoogleProvider(AIProvider):
         contents = []
         for msg in kwargs["messages"]:
             if msg.get("content"):
-                contents.append(msg["content"])
+                role = "model" if msg["role"] == "assistant" else msg["role"]
+                contents.append({"role": role, "parts": [{"text": msg["content"]}]})
 
         config = None
         system_instruction = kwargs.get("system")
