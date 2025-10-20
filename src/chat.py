@@ -20,8 +20,12 @@ DEFAULT_MODEL = ["gpt4.1"]
 DEFAULT_MAX_TOKENS = 4096
 DEFAULT_TEMPERATURE = 0.7
 
-REASONING_MODELS = {"o3", "o4-mini"}
-DEFAULT_REASONING_EFFORT = "high"
+OPEANAI_REASONING_MODELS = {
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+}
+OPENAI_DEFAULT_REASONING = "high"
 
 
 class AIProvider(ABC):
@@ -63,10 +67,10 @@ class OpenAIProvider(AIProvider):
             "stream": stream,
         }
 
-        if any(model in kwargs["model"] for model in REASONING_MODELS):
+        if any(model in kwargs["model"] for model in OPEANAI_REASONING_MODELS):
             completion_params["max_completion_tokens"] = kwargs.get("max_tokens", 4096)
             completion_params["reasoning_effort"] = kwargs.get(
-                "reasoning_effort", DEFAULT_REASONING_EFFORT
+                "reasoning_effort", OPENAI_DEFAULT_REASONING
             )
         else:
             completion_params.update(
@@ -173,10 +177,10 @@ class Chat:
         "openai": {
             "provider": OpenAIProvider,
             "models": {
-                "o4-mini": "o4-mini-2025-04-16",
-                "o3": "o3-2025-04-16",
-                "gpt4.1": "gpt-4.1-2025-04-14",
-                "gpt4.1-mini": "gpt-4.1-mini-2025-04-14",
+                "gpt5": "gpt-5",
+                "gpt5-mini": "gpt-5-mini",
+                "gpt5-nano": "gpt-5-nano",
+                "gpt4.1": "gpt-4.1",
             },
         },
         "anthropic": {
@@ -205,7 +209,7 @@ class Chat:
         provider: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        reasoning_effort: str = DEFAULT_REASONING_EFFORT,
+        reasoning_effort: str = OPENAI_DEFAULT_REASONING,
     ):
         self.provider, self.model = self._initialize_provider_and_model(model, provider)
         self.client = self.provider.create_client(base_url, api_key)
@@ -230,7 +234,6 @@ class Chat:
             resolved_model = provider_info["models"].get(model, model)
             return provider, resolved_model
 
-        # Find provider by searching through models
         for provider_info in self.PROVIDER_MAP.values():
             models = provider_info["models"]
             if model in models.keys() or model in models.values():
@@ -285,7 +288,7 @@ def prompt(
     base_url=None,
     max_tokens=DEFAULT_MAX_TOKENS,
     temperature=DEFAULT_TEMPERATURE,
-    reasoning_effort=DEFAULT_REASONING_EFFORT,
+    reasoning_effort=OPENAI_DEFAULT_REASONING,
     api_key=None,
     stream=False,
 ):
@@ -358,9 +361,9 @@ Examples:
     )
     parser.add_argument(
         "--reasoning-effort",
-        default=DEFAULT_REASONING_EFFORT,
+        default=OPENAI_DEFAULT_REASONING,
         choices=["low", "medium", "high"],
-        help=f"Reasoning effort for reasoning models (default: {DEFAULT_REASONING_EFFORT})",
+        help=f"Reasoning effort for reasoning models (default: {OPENAI_DEFAULT_REASONING})",
     )
 
     args = parser.parse_args()
