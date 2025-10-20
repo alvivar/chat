@@ -20,7 +20,7 @@ DEFAULT_MODEL = ["gpt4.1"]
 DEFAULT_MAX_TOKENS = 4096
 DEFAULT_TEMPERATURE = 0.7
 
-OPEANAI_REASONING_MODELS = {
+OPENAI_REASONING_MODELS = {
     "gpt-5",
     "gpt-5-mini",
     "gpt-5-nano",
@@ -67,7 +67,7 @@ class OpenAIProvider(AIProvider):
             "stream": stream,
         }
 
-        if any(model in kwargs["model"] for model in OPEANAI_REASONING_MODELS):
+        if any(model in kwargs["model"] for model in OPENAI_REASONING_MODELS):
             completion_params["max_completion_tokens"] = kwargs.get("max_tokens", 4096)
             completion_params["reasoning_effort"] = kwargs.get(
                 "reasoning_effort", OPENAI_DEFAULT_REASONING
