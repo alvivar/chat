@@ -207,9 +207,8 @@ class Chat:
         api_key: Optional[str] = None,
         reasoning_effort: str = DEFAULT_REASONING_EFFORT,
     ):
-        self.provider = self._get_provider(model, provider)
+        self.provider, self.model = self._initialize_provider_and_model(model, provider)
         self.client = self.provider.create_client(base_url, api_key)
-        self.model = self._resolve_model_name(model, provider)
         self.system = system
         self.max_tokens = max_tokens
         self.temperature = temperature
@@ -217,38 +216,32 @@ class Chat:
         self.reasoning_effort = reasoning_effort
         self.messages: List[Dict[str, str]] = []
 
-    def _get_provider(self, model: str, provider: Optional[str]) -> AIProvider:
-        if provider:
-            if provider not in self.PROVIDER_MAP:
+    def _initialize_provider_and_model(
+        self, model: str, provider_name: Optional[str]
+    ) -> tuple[AIProvider, str]:
+        if provider_name:
+            if provider_name not in self.PROVIDER_MAP:
                 raise ValueError(
-                    f"The provider '{provider}' is not supported. "
+                    f"The provider '{provider_name}' is not supported. "
                     "Check the available providers and try again."
                 )
-            return self.PROVIDER_MAP[provider]["provider"]()
+            provider_info = self.PROVIDER_MAP[provider_name]
+            provider = provider_info["provider"]()
+            resolved_model = provider_info["models"].get(model, model)
+            return provider, resolved_model
 
+        # Find provider by searching through models
         for provider_info in self.PROVIDER_MAP.values():
             models = provider_info["models"]
             if model in models.keys() or model in models.values():
-                return provider_info["provider"]()
+                provider = provider_info["provider"]()
+                resolved_model = provider_info["models"].get(model, model)
+                return provider, resolved_model
 
         raise ValueError(
             f"The model '{model}' isn't supported. "
             "If you're using a custom model, specify a compatible provider and base_url."
         )
-
-    def _resolve_model_name(self, model: str, provider: Optional[str]) -> str:
-        if provider:
-            provider_info = self.PROVIDER_MAP[provider]
-        else:
-            for p_info in self.PROVIDER_MAP.values():
-                models = p_info["models"]
-                if model in models.keys() or model in models.values():
-                    provider_info = p_info
-                    break
-            else:
-                return model
-
-        return provider_info["models"].get(model, model)
 
     def __call__(self, user_message: str, stream: bool = False):
         self.messages.append({"role": "user", "content": user_message})
